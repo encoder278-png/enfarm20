@@ -1,0 +1,6 @@
+{
+  "name": "EnFarm",
+  "description": "A high-fidelity space-age AI agriculture dashboard, crop disease analysis, and farming intelligence platform.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
