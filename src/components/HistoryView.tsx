@@ -19,7 +19,7 @@ export default function HistoryView({
 
   const filteredAnalyses = analyses.filter((item) => {
     const matchesSearch = item.cropType.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          item.diagnosis.toLowerCase().includes(searchQuery.toLowerCase());
+                          item.diagnose.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFilter = selectedFilter === "All" || item.riskLevel === selectedFilter;
     return matchesSearch && matchesFilter;
   });
@@ -103,7 +103,7 @@ export default function HistoryView({
 
                 <div className="space-y-1.5">
                   <span className="text-xs text-slate-400 font-medium font-sans">Diagnosis:</span>
-                  <p className="text-xs text-slate-200 leading-relaxed font-sans font-semibold">{record.diagnosis}</p>
+                  <p className="text-xs text-slate-200 leading-relaxed font-sans font-semibold">{record.diagnose}</p>
                 </div>
               </div>
 

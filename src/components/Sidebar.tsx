@@ -11,7 +11,8 @@ import {
   History,
   Settings,
   Leaf,
-  User
+  User,
+  MessageCircle
 } from "lucide-react";
 
 interface SidebarProps {
@@ -22,7 +23,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ activeTab, setActiveTab, unreadAlertsCount, farmSettings }: SidebarProps) {
-  const navItems = [
+  const navItems: Array<{ tab: Tab; label: string; icon: any; badge?: number; live?: boolean }> = [
     { tab: Tab.DASHBOARD, label: "Dashboard", icon: LayoutDashboard },
     { tab: Tab.AI_ASSISTANT, label: "AI Assistant", icon: Bot },
     { tab: Tab.UPLOAD_ANALYSIS, label: "Upload Analysis", icon: UploadCloud },
@@ -32,6 +33,8 @@ export default function Sidebar({ activeTab, setActiveTab, unreadAlertsCount, fa
     { tab: Tab.AI_RECOMMENDATIONS, label: "AI Recommendations", icon: Lightbulb },
     { tab: Tab.ALERTS_CENTER, label: "Alerts Center", icon: Bell, badge: unreadAlertsCount },
     { tab: Tab.HISTORY, label: "History", icon: History },
+    { tab: Tab.FARMERS, label: "Farmers", icon: User },
+    { tab: Tab.WHATSAPP_CHAT, label: "WhatsApp Chat", icon: MessageCircle },
   ];
 
   return (

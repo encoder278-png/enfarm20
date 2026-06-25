@@ -8,7 +8,9 @@ export enum Tab {
   AI_RECOMMENDATIONS = 'AI_RECOMMENDATIONS',
   ALERTS_CENTER = 'ALERTS_CENTER',
   HISTORY = 'HISTORY',
-  SETTINGS = 'SETTINGS'
+  SETTINGS = 'SETTINGS',
+FARMERS = 'FARMERS',
+WHATSAPP_CHAT = 'WHATSAPP_CHAT'
 }
 
 export interface ChatMessage {
@@ -78,4 +80,22 @@ export interface FarmSettings {
   irrigationMethod: string;
   autoAlertsEnabled: boolean;
   apiGroundingEnabled: boolean;
+}
+export interface FarmerProfile {
+  farmerId: string;
+  name?: string;
+  location?: string;
+  crops: string[];
+  diseases: {
+    date: string;
+    crop: string;
+    diagnosis: string;
+    severity: string;
+  }[];
+  conversations: {
+    role: "farmer" | "cen";
+    text: string;
+    timestamp: string;
+  }[];
+  lastActive: string;
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Tab, ChatMessage, AnalysisRecord, Alert, WeatherData, MarketCropPrice, FarmSettings } from "./types";
+import { Tab, ChatMessage, AnalysisRecord, Alert, WeatherData, MarketCropPrice, FarmSettings, FarmerProfile } from "./types";
 import Sidebar from "./components/Sidebar";
 import DashboardView from "./components/DashboardView";
 import AiAssistantView from "./components/AiAssistantView";
@@ -11,6 +11,7 @@ import RecommendationsView from "./components/RecommendationsView";
 import AlertsCenterView from "./components/AlertsCenterView";
 import HistoryView from "./components/HistoryView";
 import SettingsView from "./components/SettingsView";
+import FarmersView from "./components/FarmersView.tsx";
 import { Bell, Search, Sun, SunDim, ChevronDown, Leaf, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -111,6 +112,8 @@ export default function App() {
 
   // Crop Upload variables
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [farmers, setFarmers] = useState<FarmerProfile[]>([]);
+const [selectedFarmer, setSelectedFarmer] = useState<FarmerProfile | null>(null);
 
   // Weather index structure
   const [weatherData, setWeatherData] = useState<WeatherData>({
@@ -494,6 +497,15 @@ export default function App() {
               <SettingsView
                 settings={farmSettings}
                 onSaveSettings={saveFarmSettings}
+              />
+            )}
+            {activeTab === Tab.FARMERS && (
+              <FarmersView
+                farmers={farmers}
+                onOpenChat={(farmer) => {
+                  setSelectedFarmer(farmer);
+                  setActiveTab(Tab.WHATSAPP_CHAT);
+                }}
               />
             )}
           </AnimatePresence>

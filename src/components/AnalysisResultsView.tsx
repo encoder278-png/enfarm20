@@ -107,7 +107,7 @@ export default function AnalysisResultsView({
                       {record.healthScore}% health
                     </span>
                   </div>
-                  <h4 className="text-[11px] text-slate-400 mt-1 truncate">{record.diagnosis}</h4>
+                  <h4 className="text-[11px] text-slate-400 mt-1 truncate">{record.diagnose}</h4>
                   <div className="flex justify-between items-center mt-3 text-[10px] text-slate-500 font-mono">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" /> {record.date}
@@ -210,7 +210,7 @@ export default function AnalysisResultsView({
           {/* Diagnosis Block */}
           <div className="p-4 rounded-2xl bg-[#0d121c]/60 border border-slate-800/80">
             <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1.5"><Compass className="w-4 h-4 text-emerald-400" /> Diagnostic Summary Node</h3>
-            <p className="text-sm font-semibold text-white mt-2 select-text">{activeRecord.diagnosis}</p>
+            <p className="text-sm font-semibold text-white mt-2 select-text">{activeRecord.diagnose}</p>
             <p className="text-xs text-slate-300 mt-1.5 leading-relaxed selection:bg-emerald-500/20 select-text">
               {activeRecord.diagnose}
             </p>
