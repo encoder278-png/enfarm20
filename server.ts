@@ -9,25 +9,12 @@ import twilio from "twilio";
 dotenv.config();
 
 // Lazy initialization of Gemini client
-let aiClient: GoogleGenAI | null = null;
-
 function getGeminiClient(): GoogleGenAI {
-  if (!aiClient) {
-    const key = process.env.GEMINI_API_KEY;
-    if (!key || key === "MY_GEMINI_API_KEY") {
-      console.warn("WARNING: GEMINI_API_KEY is not configured or holds a placeholder. Falling back to simulated AI intelligence.");
-      throw new Error("API_KEY_MISSING");
-    }
-    aiClient = new GoogleGenAI({
-      apiKey: key,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        }
-      }
-    });
+  const key = process.env.GEMINI_API_KEY;
+  if (!key || key === "MY_GEMINI_API_KEY" || key === '""' || key === "") {
+    throw new Error("API_KEY_MISSING");
   }
-  return aiClient;
+  return new GoogleGenAI({ apiKey: key });
 }
 
 async function startServer() {
