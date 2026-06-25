@@ -438,6 +438,35 @@ SHERIA:
     res.writeHead(200, { "Content-Type": "text/xml" });
     res.end(twiml.toString());
   });
+  // Manual reply from admin to farmer via WhatsApp
+  app.post("/api/whatsapp-send", async (req, res) => {
+    try {
+      const { to, message } = req.body;
+      if (!to || !message) {
+        return res.status(400).json({ error: "to and message are required" });
+      }
+
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken  = process.env.TWILIO_AUTH_TOKEN;
+      const from       = process.env.TWILIO_WHATSAPP_NUMBER;
+
+      if (!accountSid || !authToken || !from) {
+        return res.status(500).json({ error: "Twilio not configured" });
+      }
+
+      const client = twilio(accountSid, authToken);
+      await client.messages.create({
+        from,
+        to: `whatsapp:+${to.replace("+", "")}`,
+        body: message,
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Send error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 
   // API Route: AI recommendations categories
   app.get("/api/recommendations", async (req, res) => {

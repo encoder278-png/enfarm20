@@ -11,7 +11,8 @@ import RecommendationsView from "./components/RecommendationsView";
 import AlertsCenterView from "./components/AlertsCenterView";
 import HistoryView from "./components/HistoryView";
 import SettingsView from "./components/SettingsView";
-import FarmersView from "./components/FarmersView.tsx";
+import FarmersView from "./components/FarmersView";
+import WhatsAppChatView from "./components/WhatsAppChatView";
 import { Bell, Search, Sun, SunDim, ChevronDown, Leaf, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -506,6 +507,13 @@ const [selectedFarmer, setSelectedFarmer] = useState<FarmerProfile | null>(null)
                   setSelectedFarmer(farmer);
                   setActiveTab(Tab.WHATSAPP_CHAT);
                 }}
+              />
+            )}
+            {activeTab === Tab.WHATSAPP_CHAT && (
+              <WhatsAppChatView
+                farmers={farmers}
+                selectedFarmer={selectedFarmer}
+                onSelectFarmer={(farmer) => setSelectedFarmer(farmer)}
               />
             )}
           </AnimatePresence>
