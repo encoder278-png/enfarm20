@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 import { getFarmer, saveFarmer } from "./src/memoryService";
+import twilio from "twilio";
 
 dotenv.config();
 
@@ -315,6 +316,127 @@ Provide your response exactly matching the JSON schema structure.`;
       console.error("Image Analysis API error:", error);
       res.status(500).json({ error: error.message || "Pathology engine failed." });
     }
+  });
+
+  // ── WhatsApp Bot ──────────────────────────────────────────────────────────
+  app.post("/api/whatsapp", express.urlencoded({ extended: false }), async (req, res) => {
+    const twiml = new twilio.twiml.MessagingResponse();
+
+    try {
+      const incomingMsg = req.body.Body?.trim() || "";
+      const farmerPhone  = req.body.From || "";
+      const farmerId     = `wa_${farmerPhone.replace("whatsapp:+", "")}`;
+      const numMedia     = parseInt(req.body.NumMedia || "0");
+
+      let farmer: any = null;
+      try {
+        farmer = await getFarmer(farmerId);
+      } catch {}
+
+      let replyText = "";
+
+      if (numMedia > 0) {
+        // Farmer sent a PHOTO
+        const imageUrl = req.body.MediaUrl0;
+
+        const authString = Buffer.from(
+          `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+        ).toString("base64");
+
+        const imageResp = await fetch(imageUrl, {
+          headers: { Authorization: `Basic ${authString}` },
+        });
+        const imageBuffer = await imageResp.arrayBuffer();
+        const base64Image  = Buffer.from(imageBuffer).toString("base64");
+        const mimeType     = imageResp.headers.get("content-type") || "image/jpeg";
+
+        const client = getGeminiClient();
+        const response = await client.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents: [
+            { inlineData: { data: base64Image, mimeType } },
+            {
+              text: `Wewe ni daktari wa mimea wa EnFarm Tanzania.
+Chunguza picha hii ya zao. Jibu kwa Kiswahili rahisi fupi.
+Sema: (1) Zao gani (2) Tatizo gani (3) Hatua 3 za kutibu.
+Jibu fupi sana - mkulima anasoma kwenye simu ndogo ya WhatsApp.`,
+            },
+          ],
+        });
+
+        replyText = response.text || "Samahani, sikuweza kuona picha vizuri. Tuma tena.";
+
+        // Save to Firestore
+        const updated = {
+          ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
+          farmerId,
+          conversations: [
+            ...((farmer?.conversations || []).slice(-9)),
+            { role: "farmer", text: "[Alituma picha ya zao]", timestamp: new Date().toISOString() },
+            { role: "cen",    text: replyText,                timestamp: new Date().toISOString() },
+          ],
+          lastActive: new Date().toISOString(),
+        };
+        try { await saveFarmer(farmerId, updated); } catch {}
+
+      } else if (incomingMsg) {
+        // Farmer sent TEXT
+        const client = getGeminiClient();
+
+        const recentHistory = (farmer?.conversations || []).slice(-10);
+        const contents = [
+          ...recentHistory.map((h: any) => ({
+            role: h.role === "farmer" ? "user" : "model",
+            parts: [{ text: h.text }],
+          })),
+          { role: "user", parts: [{ text: incomingMsg }] },
+        ];
+
+        const systemInstruction = `
+Wewe ni CEN, msaidizi wa kilimo wa EnFarm kwa wakulima wadogo Tanzania.
+SHERIA:
+1. Jibu kwa Kiswahili rahisi daima.
+2. Jibu swali moja kwa moja. Usiseme utangulizi mrefu.
+3. Kama mkulima anaelezea tatizo, uliza swali MOJA au mwomba apige picha.
+4. Majibu mafupi - mkulima anasoma kwenye simu ndogo.
+5. Mwisho wa jibu lako, sema hatua moja rahisi mkulima afanye LEO.
+6. Mazao: Mahindi, Muhogo, Mpunga, Alizeti, Maharage, Nyanya.
+`;
+
+        const response = await client.models.generateContent({
+          model: "gemini-2.0-flash",
+          contents,
+          config: { systemInstruction },
+        });
+
+        replyText = response.text || "Samahani, jaribu tena.";
+
+        // Save to Firestore
+        const updated = {
+          ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
+          farmerId,
+          conversations: [
+            ...((farmer?.conversations || []).slice(-9)),
+            { role: "farmer", text: incomingMsg, timestamp: new Date().toISOString() },
+            { role: "cen",    text: replyText,   timestamp: new Date().toISOString() },
+          ],
+          lastActive: new Date().toISOString(),
+        };
+        try { await saveFarmer(farmerId, updated); } catch {}
+
+      } else {
+        replyText = "Habari! Mimi ni CEN wa EnFarm. Niambie tatizo lako la shamba au tuma picha ya zao lako.";
+      }
+
+      twiml.message(replyText);
+
+    } catch (error) {
+      console.error("WhatsApp error:", error);
+      twiml.message("Samahani, kuna tatizo. Jaribu tena baadaye.");
+    }
+
+    res.writeHead(200, { "Content-Type": "text/xml" });
+    res.end(twiml.toString());
   });
 
   // API Route: AI recommendations categories
