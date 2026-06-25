@@ -117,7 +117,7 @@ RULES:
       const chatContext = history ? history.map((h: any) => `${h.role === 'user' ? 'Farmer' : 'EnFarm AI'}: ${h.text}`).join("\n") + `\nFarmer: ${message}\nEnFarm AI:` : message;
 
       const response = await client.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         contents: chatContext,
         config: {
           systemInstruction,
@@ -246,7 +246,7 @@ Use scientific names only in the crop field. Everything else must be in Swahili.
 Provide your response exactly matching the JSON schema structure.`;
 
       const response = await client.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         contents: [
           {
             inlineData: {
@@ -352,7 +352,7 @@ Provide your response exactly matching the JSON schema structure.`;
 
         const client = getGeminiClient();
         const response = await client.models.generateContent({
-          model: "gemini-1.5-flash",
+          model: "gemini-2.0-flash",
           contents: [
             { inlineData: { data: base64Image, mimeType } },
             {
@@ -404,7 +404,7 @@ SHERIA:
 `;
 
         const response = await client.models.generateContent({
-          model:"gemini-1.5-flash",
+          model:"gemini-2.0-flash",
           contents,
           config: { systemInstruction },
         });
@@ -484,7 +484,7 @@ SHERIA:
     }
 
     const response = await client.models.generateContent({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.0-flash",
       contents: "Wewe ni mshauri wa kilimo wa Tanzania. Toa ushauri mfupi wa kilimo kwa Kiswahili kwa maeneo manne: Udhibiti wa Wadudu, Umwagiliaji, Mbolea, na Uvunaji. Kila ushauri uwe sentensi moja fupi.",
       config: {
         responseMimeType: "application/json",
