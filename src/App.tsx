@@ -114,7 +114,16 @@ export default function App() {
   // Crop Upload variables
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
   const [farmers, setFarmers] = useState<FarmerProfile[]>([]);
-const [selectedFarmer, setSelectedFarmer] = useState<FarmerProfile | null>(null);
+  const [selectedFarmer, setSelectedFarmer] = useState<FarmerProfile | null>(null);
+
+  // Connect to Firestore and listen for real farmer data
+  // Every time a farmer messages on WhatsApp, this updates automatically
+  useEffect(() => {
+    const unsubscribe = listenToFarmers((liveFarmers) => {
+      setFarmers(liveFarmers);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Weather index structure
   const [weatherData, setWeatherData] = useState<WeatherData>({
