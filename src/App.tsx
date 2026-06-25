@@ -13,6 +13,7 @@ import HistoryView from "./components/HistoryView";
 import SettingsView from "./components/SettingsView";
 import FarmersView from "./components/FarmersView";
 import WhatsAppChatView from "./components/WhatsAppChatView";
+import { listenToFarmers } from "./firestoreService";
 import { Bell, Search, Sun, SunDim, ChevronDown, Leaf, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
