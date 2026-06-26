@@ -2,13 +2,14 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 import dotenv from "dotenv";
 import { getFarmer, saveFarmer } from "./src/memoryService";
 import twilio from "twilio";
 
 dotenv.config();
 
-// Lazy initialization of Gemini client
+// Lazy initialization of Gemini client (images only)
 function getGeminiClient(): GoogleGenAI {
   const key = process.env.GEMINI_API_KEY;
   if (!key || key === "MY_GEMINI_API_KEY" || key === '""' || key === "") {
@@ -16,6 +17,20 @@ function getGeminiClient(): GoogleGenAI {
   }
   return new GoogleGenAI({ apiKey: key });
 }
+
+// Groq client (all text conversations)
+function getGroqClient(): OpenAI {
+  const key = process.env.GROQ_API_KEY;
+  if (!key || key === "" || key === "YOUR_GROQ_API_KEY") {
+    throw new Error("API_KEY_MISSING");
+  }
+  return new OpenAI({
+    apiKey: key,
+    baseURL: "https://api.groq.com/openai/v1",
+  });
+}
+
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 async function startServer() {
   const app = express();
@@ -45,18 +60,18 @@ async function startServer() {
       }
       let farmerMemory = null;
 
-if (farmerId) {
-  try {
-    farmerMemory = await getFarmer(farmerId);
-    console.log("Farmer memory loaded:", farmerMemory);
-  } catch (err) {
-    console.error("Memory load error:", err);
-  }
-}
+      if (farmerId) {
+        try {
+          farmerMemory = await getFarmer(farmerId);
+          console.log("Farmer memory loaded:", farmerMemory);
+        } catch (err) {
+          console.error("Memory load error:", err);
+        }
+      }
 
-      let client: GoogleGenAI;
+      let client: OpenAI;
       try {
-        client = getGeminiClient();
+        client = getGroqClient();
       } catch (err: any) {
         if (err.message === "API_KEY_MISSING") {
           // Simulated Agriculture Expert responses as graceful fallback
@@ -70,16 +85,16 @@ if (farmerId) {
 
       // Convert history to format chat can understand
       const memoryContext = farmerMemory
-  ? `
+        ? `
 FARMER MEMORY:
 ${JSON.stringify(farmerMemory, null, 2)}
 `
-  : `
+        : `
 FARMER MEMORY:
 No previous farmer data.
 `;
 
-const systemInstruction = `
+      const systemInstruction = `
 ${memoryContext}
 
 You are CEN, the EnFarm AI agricultural assistant for Tanzanian smallholder farmers.
@@ -97,47 +112,52 @@ RULES:
 6. End every response with one simple action the farmer can take today.
 7. If asked anything unrelated to farming, politely redirect back to agriculture.
 `;
-       
 
+      // Build messages array for Groq
+      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+        { role: "system", content: systemInstruction }
+      ];
 
-      // We'll use chat format or standard generateContent with history as context
-      const chatContext = history ? history.map((h: any) => `${h.role === 'user' ? 'Farmer' : 'EnFarm AI'}: ${h.text}`).join("\n") + `\nFarmer: ${message}\nEnFarm AI:` : message;
-
-      const response = await client.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: chatContext,
-        config: {
-          systemInstruction,
-          tools: [{ googleSearch: {} }],
+      if (history && Array.isArray(history)) {
+        for (const h of history.slice(-10)) {
+          messages.push({
+            role: h.role === "user" ? "user" : "assistant",
+            content: h.text
+          });
         }
+      }
+      messages.push({ role: "user", content: message });
+
+      const completion = await client.chat.completions.create({
+        model: GROQ_MODEL,
+        messages,
+        max_tokens: 500,
+        temperature: 0.7,
       });
 
-      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-      const sources = groundingChunks.map((chunk: any) => ({
-        title: chunk.web?.title || "Search Reference",
-        uri: chunk.web?.uri || ""
-      })).filter((s: any) => s.uri);
+      const aiResponse = completion.choices[0]?.message?.content || "I was unable to analyze this crop request.";
 
-      const aiResponse = response.text || "I was unable to analyze this crop request.";
+      // groundingSources is empty — Groq does not have Google Search grounding
+      const sources: any[] = [];
 
-if (farmerId) {
-  try {
-    await saveFarmer(farmerId, {
-      ...(farmerMemory || {}),
-      farmerId,
-      lastMessage: message,
-      lastResponse: aiResponse,
-      lastActive: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error("Memory save error:", err);
-  }
-}
+      if (farmerId) {
+        try {
+          await saveFarmer(farmerId, {
+            ...(farmerMemory || {}),
+            farmerId,
+            lastMessage: message,
+            lastResponse: aiResponse,
+            lastActive: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error("Memory save error:", err);
+        }
+      }
 
-res.json({
-  text: aiResponse,
-  groundingSources: sources
-});
+      res.json({
+        text: aiResponse,
+        groundingSources: sources
+      });
 
     } catch (error: any) {
       console.error("Chat API error:", error);
@@ -145,7 +165,7 @@ res.json({
     }
   });
 
-  // API Route: Image Leaf Diagnosis
+  // API Route: Image Leaf Diagnosis — UNCHANGED, still uses Gemini
   app.post("/api/analyze-image", async (req, res) => {
     try {
       const { imageBase64, mimeType, cropTypePrompt } = req.body;
@@ -323,7 +343,7 @@ Provide your response exactly matching the JSON schema structure.`;
       let replyText = "";
 
       if (numMedia > 0) {
-        // Farmer sent a PHOTO
+        // Farmer sent a PHOTO — UNCHANGED, still uses Gemini
         const imageUrl = req.body.MediaUrl0;
 
         const authString = Buffer.from(
@@ -367,17 +387,10 @@ Jibu fupi sana - mkulima anasoma kwenye simu ndogo ya WhatsApp.`,
         try { await saveFarmer(farmerId, updated); } catch {}
 
       } else if (incomingMsg) {
-        // Farmer sent TEXT
-        const client = getGeminiClient();
+        // Farmer sent TEXT — switched to Groq
+        const groqClient = getGroqClient();
 
         const recentHistory = (farmer?.conversations || []).slice(-10);
-        const contents = [
-          ...recentHistory.map((h: any) => ({
-            role: h.role === "farmer" ? "user" : "model",
-            parts: [{ text: h.text }],
-          })),
-          { role: "user", parts: [{ text: incomingMsg }] },
-        ];
 
         const systemInstruction = `
 Wewe ni CEN, msaidizi wa kilimo wa EnFarm kwa wakulima wadogo Tanzania.
@@ -390,15 +403,25 @@ SHERIA:
 6. Mazao: Mahindi, Muhogo, Mpunga, Alizeti, Maharage, Nyanya.
 `;
 
-        const response = await client.models.generateContent({
-          model:"gemini-2.0-flash",
-          contents,
-          config: { systemInstruction },
+        const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+          { role: "system", content: systemInstruction },
+          ...recentHistory.map((h: any) => ({
+            role: (h.role === "farmer" ? "user" : "assistant") as "user" | "assistant",
+            content: h.text,
+          })),
+          { role: "user", content: incomingMsg },
+        ];
+
+        const completion = await groqClient.chat.completions.create({
+          model: GROQ_MODEL,
+          messages,
+          max_tokens: 400,
+          temperature: 0.7,
         });
 
-        replyText = response.text || "Samahani, jaribu tena.";
+        replyText = completion.choices[0]?.message?.content || "Samahani, jaribu tena.";
 
-        // Save to Firestore
+        // Save to Firestore — UNCHANGED
         const updated = {
           ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
           farmerId,
@@ -425,7 +448,8 @@ SHERIA:
     res.writeHead(200, { "Content-Type": "text/xml" });
     res.end(twiml.toString());
   });
-  // Manual reply from admin to farmer via WhatsApp
+
+  // Manual reply from admin to farmer via WhatsApp — UNCHANGED
   app.post("/api/whatsapp-send", async (req, res) => {
     try {
       const { to, message } = req.body;
@@ -455,56 +479,52 @@ SHERIA:
     }
   });
 
-  // API Route: AI recommendations categories
+  // API Route: AI recommendations — switched to Groq
   app.get("/api/recommendations", async (req, res) => {
+  const fallback = {
+    pestControl: "Angalia mashamba yako asubuhi kwa dalili za viwavi au wadudu wengine.",
+    irrigation: "Mwagilia mimea yako asubuhi na mapema — lita 2 kwa kila mmea.",
+    fertilization: "Ongeza mbolea ya DAP wakati wa kupanda na urea baada ya wiki 4.",
+    harvesting: "Vuna mahindi yako wakati maganda yanapokauka na kuwa ya kahawia."
+  };
+
   try {
-    let client: GoogleGenAI;
-    try {
-      client = getGeminiClient();
-    } catch {
-      return res.json({
-        pestControl: "Angalia mashamba yako asubuhi kwa dalili za viwavi au wadudu wengine.",
-        irrigation: "Mwagilia mimea yako asubuhi na mapema — lita 2 kwa kila mmea.",
-        fertilization: "Ongeza mbolea ya DAP wakati wa kupanda na urea baada ya wiki 4.",
-        harvesting: "Vuna mahindi yako wakati maganda yanapokauka na kuwa ya kahawia."
-      });
-    }
+    const client = getGroqClient();
 
-    const response = await client.models.generateContent({
-      model: "gemini-2.0-flash",
-      contents: "Wewe ni mshauri wa kilimo wa Tanzania. Toa ushauri mfupi wa kilimo kwa Kiswahili kwa maeneo manne: Udhibiti wa Wadudu, Umwagiliaji, Mbolea, na Uvunaji. Kila ushauri uwe sentensi moja fupi.",
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            pestControl: { type: Type.STRING },
-            irrigation: { type: Type.STRING },
-            fertilization: { type: Type.STRING },
-            harvesting: { type: Type.STRING }
-          },
-          required: ["pestControl", "irrigation", "fertilization", "harvesting"]
+    const completion = await client.chat.completions.create({
+      model: GROQ_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "Wewe ni mshauri wa kilimo wa Tanzania. Jibu kwa JSON tu, bila maelezo mengine."
+        },
+        {
+          role: "user",
+          content: `Toa ushauri mfupi wa kilimo kwa Kiswahili kwa maeneo manne.
+Jibu kwa JSON hii hasa, bila kitu kingine chochote:
+{
+  "pestControl": "sentensi moja",
+  "irrigation": "sentensi moja",
+  "fertilization": "sentensi moja",
+  "harvesting": "sentensi moja"
+}`
         }
-      }
+      ],
+      max_tokens: 300,
+      temperature: 0.5,
     });
 
-    const responseText = response.text || "";
-    if (!responseText) {
-      throw new Error("Empty response received from recommendations agent.");
-    }
+    const raw = completion.choices[0]?.message?.content || "";
+    const clean = raw.replace(/```json|```/g, "").trim();
+    res.json(JSON.parse(clean));
 
-    res.json(JSON.parse(responseText.trim()));
   } catch (e) {
-    res.json({
-      pestControl: "Angalia mashamba yako asubuhi kwa dalili za viwavi au wadudu wengine.",
-      irrigation: "Mwagilia mimea yako asubuhi na mapema — lita 2 kwa kila mmea.",
-      fertilization: "Ongeza mbolea ya DAP wakati wa kupanda na urea baada ya wiki 4.",
-      harvesting: "Vuna mahindi yako wakati maganda yanapokauka na kuwa ya kahawia."
-    });
+    console.error("Recommendations error:", e);
+    res.json(fallback);
   }
 });
 
-  // Vite middleware for development
+  // Vite middleware for development — UNCHANGED
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
