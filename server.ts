@@ -42,11 +42,13 @@ async function startServer() {
 
   // API Route: Health Check
   app.get("/api/health", (req, res) => {
-    const activeKey = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY";
+    const geminiConfigured = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY";
+    const groqConfigured = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "YOUR_GROQ_API_KEY";
     res.json({
       status: "ok",
       platform: "EnFarm Crop Intelligence Server",
-      geminiConfigured: activeKey,
+      geminiConfigured,
+      groqConfigured,
       timestamp: new Date().toISOString()
     });
   });
@@ -60,14 +62,14 @@ async function startServer() {
       }
       let farmerMemory = null;
 
-      if (farmerId) {
-        try {
-          farmerMemory = await getFarmer(farmerId);
-          console.log("Farmer memory loaded:", farmerMemory);
-        } catch (err) {
-          console.error("Memory load error:", err);
-        }
-      }
+if (farmerId) {
+  try {
+    farmerMemory = await getFarmer(farmerId);
+    console.log("Farmer memory loaded:", farmerMemory);
+  } catch (err) {
+    console.error("Memory load error:", err);
+  }
+}
 
       let client: OpenAI;
       try {
@@ -85,16 +87,16 @@ async function startServer() {
 
       // Convert history to format chat can understand
       const memoryContext = farmerMemory
-        ? `
+  ? `
 FARMER MEMORY:
 ${JSON.stringify(farmerMemory, null, 2)}
 `
-        : `
+  : `
 FARMER MEMORY:
 No previous farmer data.
 `;
 
-      const systemInstruction = `
+const systemInstruction = `
 ${memoryContext}
 
 You are CEN, the EnFarm AI agricultural assistant for Tanzanian smallholder farmers.
@@ -140,24 +142,24 @@ RULES:
       // groundingSources is empty — Groq does not have Google Search grounding
       const sources: any[] = [];
 
-      if (farmerId) {
-        try {
-          await saveFarmer(farmerId, {
-            ...(farmerMemory || {}),
-            farmerId,
-            lastMessage: message,
-            lastResponse: aiResponse,
-            lastActive: new Date().toISOString()
-          });
-        } catch (err) {
-          console.error("Memory save error:", err);
-        }
-      }
+if (farmerId) {
+  try {
+    await saveFarmer(farmerId, {
+      ...(farmerMemory || {}),
+      farmerId,
+      lastMessage: message,
+      lastResponse: aiResponse,
+      lastActive: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("Memory save error:", err);
+  }
+}
 
-      res.json({
-        text: aiResponse,
-        groundingSources: sources
-      });
+res.json({
+  text: aiResponse,
+  groundingSources: sources
+});
 
     } catch (error: any) {
       console.error("Chat API error:", error);
