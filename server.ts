@@ -415,11 +415,11 @@ Provide your response exactly matching the JSON schema structure.`,
           diseases: [
             ...((farmer?.diseases || [])),
             ...(diagnosisRecord ? [{
-              cropType: diagnosisRecord.crop,
-              diagnosis: diagnosisRecord.diagnosis,
-              severity: diagnosisRecord.severity,
-              healthScore: diagnosisRecord.healthScore,
-              confidence: diagnosisRecord.confidence,
+              cropType: diagnosisRecord.crop ?? null,
+              diagnosis: diagnosisRecord.diagnosis ?? null,
+              severity: diagnosisRecord.severity ?? null,
+              healthScore: diagnosisRecord.healthScore ?? null,
+              confidence: diagnosisRecord.confidence ?? null,
               timestamp: new Date().toISOString(),
             }] : []),
           ],
@@ -527,17 +527,18 @@ ${shouldAskNow ? `
 
         // Save to Firestore — UNCHANGED
         const updated = {
-          ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
-          farmerId,
-          name: farmer?.name,
-          region: farmer?.region,
-          profileAskedAt: shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt,
-          conversations: [
-            ...((farmer?.conversations || []).slice(-9)),
-            { role: "farmer", text: incomingMsg, timestamp: new Date().toISOString() },
-            { role: "cen",    text: replyText,   timestamp: new Date().toISOString() },
-          ],
-          lastActive: new Date().toISOString(),
+  ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
+  farmerId,
+  name: farmer?.name ?? null,
+  region: farmer?.region ?? null,
+  profileAskedAt: (shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt) ?? null,
+  conversations: [
+    ...((farmer?.conversations || []).slice(-9)),
+    { role: "farmer", text: incomingMsg, timestamp: new Date().toISOString() },
+    { role: "cen",    text: replyText,   timestamp: new Date().toISOString() },
+  ],
+  lastActive: new Date().toISOString(),
+};
         };
         try { await saveFarmer(farmerId, updated); } catch {}
 
