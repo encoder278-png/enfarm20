@@ -365,20 +365,64 @@ Provide your response exactly matching the JSON schema structure.`;
           contents: [
             { inlineData: { data: base64Image, mimeType } },
             {
-              text: `Wewe ni daktari wa mimea wa EnFarm Tanzania.
-Chunguza picha hii ya zao. Jibu kwa Kiswahili rahisi fupi.
-Sema: (1) Zao gani (2) Tatizo gani (3) Hatua 3 za kutibu.
-Jibu fupi sana - mkulima anasoma kwenye simu ndogo ya WhatsApp.`,
+              text: `You are CEN, the EnFarm crop disease specialist for Tanzania. Analyze this crop image.
+Focus on crops common in Tanzania: maize, cassava, rice, sunflower, beans.
+Identify the crop, diagnose any disease, pest damage, or nutrient deficiency.
+All text fields in your response must be written in simple Swahili that an uneducated farmer can understand.
+Use scientific names only in the crop field. Everything else must be in Swahili.
+Provide your response exactly matching the JSON schema structure.`,
             },
           ],
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: Type.OBJECT,
+              properties: {
+                crop: { type: Type.STRING },
+                healthScore: { type: Type.INTEGER },
+                riskLevel: { type: Type.STRING },
+                diagnosis: { type: Type.STRING },
+                severity: { type: Type.STRING },
+                confidence: { type: Type.NUMBER },
+                recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
+                summary: { type: Type.STRING }
+              },
+              required: ["crop", "healthScore", "riskLevel", "diagnosis", "severity", "confidence", "recommendations", "summary"]
+            }
+          }
         });
 
-        replyText = response.text || "Samahani, sikuweza kuona picha vizuri. Tuma tena.";
+        let diagnosisRecord: any = null;
+        try {
+          diagnosisRecord = JSON.parse((response.text || "{}").trim());
+        } catch {
+          diagnosisRecord = null;
+        }
 
-        // Save to Firestore
+        // Build a short farmer-facing Swahili reply from the structured data
+        if (diagnosisRecord) {
+          const steps = (diagnosisRecord.recommendations || []).slice(0, 3)
+            .map((r: string, i: number) => `${i + 1}. ${r}`).join("\n");
+          replyText = `*${diagnosisRecord.diagnosis}*\nZao: ${diagnosisRecord.crop}\nUkali: ${diagnosisRecord.severity}\n\n${steps}`;
+        } else {
+          replyText = "Samahani, sikuweza kuona picha vizuri. Tuma tena.";
+        }
+
+        // Save structured diagnosis + conversation log
         const updated = {
           ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
           farmerId,
+          diseases: [
+            ...((farmer?.diseases || [])),
+            ...(diagnosisRecord ? [{
+              cropType: diagnosisRecord.crop,
+              diagnosis: diagnosisRecord.diagnosis,
+              severity: diagnosisRecord.severity,
+              healthScore: diagnosisRecord.healthScore,
+              confidence: diagnosisRecord.confidence,
+              timestamp: new Date().toISOString(),
+            }] : []),
+          ],
           conversations: [
             ...((farmer?.conversations || []).slice(-9)),
             { role: "farmer", text: "[Alituma picha ya zao]", timestamp: new Date().toISOString() },
@@ -389,12 +433,41 @@ Jibu fupi sana - mkulima anasoma kwenye simu ndogo ya WhatsApp.`,
         try { await saveFarmer(farmerId, updated); } catch {}
 
       } else if (incomingMsg) {
-        // Farmer sent TEXT — switched to Groq
-        const groqClient = getGroqClient();
+  // Farmer sent TEXT — switched to Groq
+  const groqClient = getGroqClient();
 
-        const recentHistory = (farmer?.conversations || []).slice(-10);
+  const recentHistory = (farmer?.conversations || []).slice(-10);
 
-        const systemInstruction = `
+  // Build farmer memory context (this was missing entirely on WhatsApp)
+  const farmerName   = farmer?.name || null;
+  const farmerRegion = farmer?.region || null;
+  const knownCrops    = farmer?.crops?.length ? farmer.crops.join(", ") : null;
+  const pastDiseases  = farmer?.diseases?.length
+    ? farmer.diseases.slice(-3).map((d: any) => `${d.cropType || "?"}: ${d.diagnosis} (${d.timestamp?.slice(0,10) || ""})`).join("; ")
+    : null;
+
+  const memoryContext = farmer
+    ? `
+TAARIFA ZA MKULIMA HUYU (tumia bila kuuliza tena kama unazo):
+- Jina: ${farmerName || "Haijulikani bado"}
+- Mkoa: ${farmerRegion || "Haijulikani bado"}
+- Mazao anayolima: ${knownCrops || "Haijulikani bado"}
+- Historia ya magonjwa: ${pastDiseases || "Hakuna rekodi"}
+`
+    : `
+TAARIFA ZA MKULIMA: Hakuna rekodi ya awali — huyu ni mkulima mpya.
+`;
+// Detect if we still need to collect basic profile info
+  const needsProfile = !farmer?.name || !farmer?.region;
+  // Only ASK if we haven't already asked before — avoids nagging every message
+  const ASK_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
+const lastAsked = farmer?.profileAskedAt ? new Date(farmer.profileAskedAt).getTime() : 0;
+const cooldownPassed = Date.now() - lastAsked > ASK_COOLDOWN_MS;
+const shouldAskNow = needsProfile && (!farmer?.profileAskedAt || cooldownPassed);
+
+  const systemInstruction = `
+${memoryContext}
+
 Wewe ni CEN, msaidizi wa kilimo wa EnFarm kwa wakulima wadogo Tanzania.
 SHERIA:
 1. Jibu kwa Kiswahili rahisi daima.
@@ -403,6 +476,11 @@ SHERIA:
 4. Majibu mafupi - mkulima anasoma kwenye simu ndogo.
 5. Mwisho wa jibu lako, sema hatua moja rahisi mkulima afanye LEO.
 6. Mazao: Mahindi, Muhogo, Mpunga, Alizeti, Maharage, Nyanya.
+7. Kama unajua jina la mkulima, mwite kwa jina mara moja katika jibu lako.
+8. USIULIZE tena jina au mkoa kama tayari unazo taarifa hizo hapo juu.
+${shouldAskNow ? `
+9. MUHIMU: Hatujui jina au mkoa wa mkulima huyu bado. Baada ya kujibu swali lake LEO, ongeza swali moja zaidi mwishoni: "Kabla tusonge mbele, jina lako ni nani na unakaa mkoa gani?" Usiulize hili kabla ya kujibu swali lake la msingi.
+` : ''}
 `;
 
         const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -423,10 +501,37 @@ SHERIA:
 
         replyText = completion.choices[0]?.message?.content || "Samahani, jaribu tena.";
 
+        // Lightweight name/region extraction from farmer's NEXT message (not this one)
+        // Run this check on the INCOMING message, in case farmer already answered last time we asked
+        if (needsProfile) {
+          const extraction = await groqClient.chat.completions.create({
+            model: GROQ_MODEL,
+            messages: [{
+              role: "system",
+              content: `Toa jina na mkoa kutoka kwenye ujumbe huu kama vipo. Jibu JSON tu: {"name": "..." au null, "region": "..." au null}. Kama hakuna taarifa, rudisha null kwa vyote.`
+            }, {
+              role: "user",
+              content: incomingMsg
+            }],
+            max_tokens: 80,
+            temperature: 0,
+          });
+          try {
+            const parsed = JSON.parse(
+              (extraction.choices[0]?.message?.content || "{}").replace(/```json|```/g, "").trim()
+            );
+            if (parsed.name) farmer = { ...(farmer || {}), name: parsed.name };
+            if (parsed.region) farmer = { ...(farmer || {}), region: parsed.region };
+          } catch { /* ignore parse failures, don't block the reply */ }
+        }
+
         // Save to Firestore — UNCHANGED
         const updated = {
           ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
           farmerId,
+          name: farmer?.name,
+          region: farmer?.region,
+          profileAskedAt: shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt,
           conversations: [
             ...((farmer?.conversations || []).slice(-9)),
             { role: "farmer", text: incomingMsg, timestamp: new Date().toISOString() },
