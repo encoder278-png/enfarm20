@@ -539,9 +539,7 @@ ${shouldAskNow ? `
   ],
   lastActive: new Date().toISOString(),
 };
-        };
-        try { await saveFarmer(farmerId, updated); } catch {}
-
+        
       } else {
         replyText = "Habari! Mimi ni CEN wa EnFarm. Niambie tatizo lako la shamba au tuma picha ya zao lako.";
       }
