@@ -532,14 +532,15 @@ ${shouldAskNow ? `
   name: farmer?.name ?? null,
   region: farmer?.region ?? null,
   profileAskedAt: (shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt) ?? null,
-  conversations: [
+      conversations: [
     ...((farmer?.conversations || []).slice(-9)),
     { role: "farmer", text: incomingMsg, timestamp: new Date().toISOString() },
     { role: "cen",    text: replyText,   timestamp: new Date().toISOString() },
   ],
   lastActive: new Date().toISOString(),
 };
-        
+try { await saveFarmer(farmerId, updated); } catch (err) { console.error("Save failed for", farmerId, err); }
+
       } else {
         replyText = "Habari! Mimi ni CEN wa EnFarm. Niambie tatizo lako la shamba au tuma picha ya zao lako.";
       }
