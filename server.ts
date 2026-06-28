@@ -32,6 +32,37 @@ function getGroqClient(): OpenAI {
 
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
+// Approximate coordinates for Tanzania regions — add more as real farmers mention them
+const TANZANIA_REGION_COORDS: Record<string, { lat: number; lon: number }> = {
+  "mbeya": { lat: -8.9, lon: 33.45 },
+  "kilimanjaro": { lat: -3.35, lon: 37.33 },
+  "arusha": { lat: -3.37, lon: 36.68 },
+  "dodoma": { lat: -6.17, lon: 35.74 },
+  "morogoro": { lat: -6.82, lon: 37.66 },
+  "mwanza": { lat: -2.52, lon: 32.90 },
+  "iringa": { lat: -7.77, lon: 35.69 },
+  "tanga": { lat: -5.07, lon: 39.10 },
+  "singida": { lat: -4.82, lon: 34.74 },
+};
+
+async function getWeatherForRegion(regionName: string): Promise<string | null> {
+  const key = regionName.toLowerCase().trim();
+  const coords = TANZANIA_REGION_COORDS[key];
+  if (!coords) return null;
+
+  try {
+    const res = await fetch(
+      `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&current=temperature_2m,precipitation,relative_humidity_2m&daily=precipitation_sum,temperature_2m_max,temperature_2m_min&timezone=Africa%2FNairobi&forecast_days=3`
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    return JSON.stringify(data);
+  } catch (err) {
+    console.error("Weather fetch failed:", err);
+    return null;
+  }
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -440,11 +471,18 @@ Provide your response exactly matching the JSON schema structure.`,
 
   // Build farmer memory context (this was missing entirely on WhatsApp)
   const farmerName   = farmer?.name || null;
-  const farmerRegion = farmer?.region || null;
-  const knownCrops    = farmer?.crops?.length ? farmer.crops.join(", ") : null;
-  const pastDiseases  = farmer?.diseases?.length
-    ? farmer.diseases.slice(-3).map((d: any) => `${d.cropType || "?"}: ${d.diagnosis} (${d.timestamp?.slice(0,10) || ""})`).join("; ")
-    : null;
+const farmerRegion = farmer?.region || null;
+const knownCrops    = farmer?.crops?.length ? farmer.crops.join(", ") : null;
+const pastDiseases  = farmer?.diseases?.length
+  ? farmer.diseases.slice(-3).map((d: any) => `${d.cropType || "?"}: ${d.diagnosis} (${d.timestamp?.slice(0,10) || ""})`).join("; ")
+  : null;
+
+  // Check if farmer is asking about weather, and fetch real data if we know their region
+  let weatherInfo: string | null = null;
+  const askedAboutWeather = /hali ya hewa|mvua|jua kali|joto|baridi|nivune|kuvuna|wakati wa kuvuna|nipande|kupanda/i.test(incomingMsg);
+  if (askedAboutWeather && farmerRegion) {
+    weatherInfo = await getWeatherForRegion(farmerRegion);
+  }
 
   const memoryContext = farmer
     ? `
@@ -453,6 +491,7 @@ TAARIFA ZA MKULIMA HUYU (tumia bila kuuliza tena kama unazo):
 - Mkoa: ${farmerRegion || "Haijulikani bado"}
 - Mazao anayolima: ${knownCrops || "Haijulikani bado"}
 - Historia ya magonjwa: ${pastDiseases || "Hakuna rekodi"}
+${weatherInfo ? `- Taarifa za hali ya hewa za sasa kwa ${farmerRegion}: ${weatherInfo}` : ''}
 `
     : `
 TAARIFA ZA MKULIMA: Hakuna rekodi ya awali — huyu ni mkulima mpya.
@@ -481,6 +520,7 @@ SHERIA:
 ${shouldAskNow ? `
 9. MUHIMU: Hatujui jina au mkoa wa mkulima huyu bado. Baada ya kujibu swali lake LEO, ongeza swali moja zaidi mwishoni: "Kabla tusonge mbele, jina lako ni nani na unakaa mkoa gani?" Usiulize hili kabla ya kujibu swali lake la msingi.
 ` : ''}
+10. Kama mkulima anauliza kuhusu hali ya hewa: kama una taarifa za hali ya hewa hapo juu, zitumie kujibu kwa uhakika. Kama hakuna taarifa (hujui mkoa wake, au taarifa hazipo), sema kwa uwazi "Sina taarifa za hakika za hali ya hewa kwa eneo lako" — USIBUNI jibu kamwe.
 `;
 
         const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
