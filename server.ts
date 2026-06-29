@@ -464,7 +464,16 @@ Provide your response exactly matching the JSON schema structure.`,
         try { await saveFarmer(farmerId, updated); } catch {}
 
       } else if (incomingMsg) {
-  // Farmer sent TEXT — switched to Groq
+        // Reply instantly so Twilio doesn't time out — real answer follows as a separate message
+        twiml.message("Ninachunguza swali lako, nitajibu kwa muda mfupi...");
+        res.writeHead(200, { "Content-Type": "text/xml" });
+        res.end(twiml.toString());
+
+        // Everything below runs AFTER Twilio already has its response —
+        // errors here can't be sent back via twiml anymore, so we send
+        // the real answer as a follow-up message instead.
+        (async () => {
+          try {
   const groqClient = getGroqClient();
 
   const recentHistory = (farmer?.conversations || []).slice(-10);
@@ -587,6 +596,24 @@ ${shouldAskNow ? `
   lastActive: new Date().toISOString(),
 };
 try { await saveFarmer(farmerId, updated); } catch (err) { console.error("Save failed for", farmerId, err); }
+
+            // Send the real answer as a follow-up WhatsApp message
+            const accountSid = process.env.TWILIO_ACCOUNT_SID;
+            const authToken  = process.env.TWILIO_AUTH_TOKEN;
+            const from       = process.env.TWILIO_WHATSAPP_NUMBER;
+            if (accountSid && authToken && from) {
+              const followUpClient = twilio(accountSid, authToken);
+              await followUpClient.messages.create({
+                from,
+                to: farmerPhone,
+                body: replyText,
+              });
+            }
+          } catch (err) {
+            console.error("Async WhatsApp text handling error:", err);
+          }
+        })();
+        return; // already responded to Twilio above, stop here
 
       } else {
         replyText = "Habari! Mimi ni CEN wa EnFarm. Niambie tatizo lako la shamba au tuma picha ya zao lako.";
