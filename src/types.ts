@@ -100,4 +100,4 @@ export interface FarmerProfile {
     timestamp: string;
   }[];
   lastActive: string;
-}s
+}
