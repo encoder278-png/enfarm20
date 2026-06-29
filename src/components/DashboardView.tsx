@@ -535,4 +535,3 @@ export default function DashboardView({ farmers, analyses, alerts, setActiveTab 
     </div>
   );
 }
-s
