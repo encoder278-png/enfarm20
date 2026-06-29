@@ -6,7 +6,7 @@ import {
   query,
   type Firestore
 } from "firebase/firestore";
-import { FarmerProfile } from "./types";
+import { FarmerProfile, AnalysisRecord } from "./types";
 
 // ── Initialize Firebase for the FRONTEND ─────────────────────────────────
 // This uses your VITE_ environment variables which are safe for the browser.
@@ -52,6 +52,54 @@ export function listenToFarmers(
       },
       (err) => {
         console.error("Firestore listener error:", err);
+        callback([]);
+      }
+    );
+
+    return unsubscribe;
+  } catch (err) {
+    console.error("Firestore init error:", err);
+    callback([]);
+    return () => {};
+  }
+}
+export function listenToAnalyses(
+  callback: (analyses: AnalysisRecord[]) => void
+): () => void {
+  try {
+    const db = getDb();
+    const q = query(collection(db, "farmers"));
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const allAnalyses: AnalysisRecord[] = [];
+        snapshot.docs.forEach((doc) => {
+          const farmer = doc.data() as FarmerProfile;
+          (farmer.diseases || []).forEach((d, i) => {
+            const dt = d.timestamp ? new Date(d.timestamp) : new Date();
+            allAnalyses.push({
+              id: `${farmer.farmerId}-${i}`,
+              title: `${d.cropType || "Unknown crop"} diagnosis`,
+              date: dt.toISOString().split("T")[0],
+              time: dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              cropType: d.cropType || "Unknown",
+              healthScore: d.healthScore ?? 0,
+              riskLevel: (d.severity === "Severe" || d.severity === "High" ? "High"
+                : d.severity === "Moderate" || d.severity === "Medium" ? "Medium"
+                : "Low") as "Low" | "Medium" | "High",
+              diagnose: d.diagnosis || "Unknown",
+              recommendations: [],
+              confidence: d.confidence ?? 0,
+              status: "Completed" as const,
+            });
+          });
+        });
+        allAnalyses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        callback(allAnalyses);
+      },
+      (err) => {
+        console.error("Analyses listener error:", err);
         callback([]);
       }
     );

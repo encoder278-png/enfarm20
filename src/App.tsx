@@ -13,7 +13,7 @@ import HistoryView from "./components/HistoryView";
 import SettingsView from "./components/SettingsView";
 import FarmersView from "./components/FarmersView";
 import WhatsAppChatView from "./components/WhatsAppChatView";
-import { listenToFarmers } from "./firestoreService";
+import { listenToFarmers, listenToAnalyses } from "./firestoreService";
 import { Bell, Search, Sun, SunDim, ChevronDown, Leaf, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
@@ -22,90 +22,10 @@ export default function App() {
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   
   // Simulated initial analysis records with exact picture naming representation: Data Analyse 1-4
- const [analyses, setAnalyses] = useState<AnalysisRecord[]>([
-  {
-    id: "analyse-1",
-    title: "Uchambuzi 1",
-    cropType: "Mahindi (Zea mays)",
-    date: "2026-06-04",
-    time: "10:00 AM",
-    healthScore: 45,
-    riskLevel: "High",
-    diagnose: "Mahindi yana shambulio kubwa la viwavi vya jeshi. Majani yameliwa na viwavi. Hatua za haraka zinahitajika ili kuokoa mavuno.",
-    recommendations: [
-      "Nyunyizia dawa ya Lambda-cyhalothrin asubuhi na mapema.",
-      "Angalia mimea kila siku kwa mayai ya viwavi chini ya majani.",
-      "Kata na choma majani yaliyoathirika."
-    ],
-    confidence: 0.88,
-    status: "Completed"
-  },
-  {
-    id: "analyse-2",
-    title: "Uchambuzi 2",
-    cropType: "Muhogo (Manihot esculenta)",
-    date: "2026-06-04",
-    time: "12:00 PM",
-    healthScore: 38,
-    riskLevel: "High",
-    diagnose: "Muhogo una ugonjwa mbaya ya mosaic unaosambazwa na wadudu weupe wadogo. Mimea iliyoathirika lazima ing'olewe haraka.",
-    recommendations: [
-      "Ng'oa mimea yote iliyoathirika na uichome mbali na shamba.",
-      "Usitumie vipande vya muhogo mgonjwa kupanda.",
-      "Panda aina ya muhogo inayostahimili ugonjwa kama UKIRIGURU."
-    ],
-    confidence: 0.91,
-    status: "Completed"
-  },
-  {
-    id: "analyse-3",
-    title: "Uchambuzi 3",
-    cropType: "Mahindi (Zea mays)",
-    date: "2026-06-03",
-    time: "10:00 AM",
-    healthScore: 85,
-    riskLevel: "Low",
-    diagnose: "Mahindi yana afya nzuri. Kuna upungufu mdogo wa nitrojeni unaoonekana kwa njano kidogo kwenye ncha za majani.",
-    recommendations: [
-      "Weka mbolea ya urea kidogo — kilo 40 kwa ekari moja.",
-      "Endelea kumwagilia mara mbili kwa wiki.",
-      "Shamba lako liko vizuri. Endelea kulilinda."
-    ],
-    confidence: 0.95,
-    status: "Completed"
-  }
-]);
+    const [analyses, setAnalyses] = useState<AnalysisRecord[]>([]);
 
   // Initial Threat Alerts logs matching picture details
-  const [alerts, setAlerts] = useState<Alert[]>([
-  {
-    id: "alert-1",
-    title: "Hatari ya Viwavi",
-    category: "pathogen threat",
-    riskLevel: "Severe",
-    timestamp: "Leo asubuhi",
-    read: false,
-    message: "Dalili za viwavi vya jeshi zimeripotiwa katika maeneo ya Kilimanjaro. Angalia mashamba yako haraka."
-  },
-  {
-    id: "alert-2",
-    title: "Mvua Inatarajiwa",
-    category: "weather stress",
-    riskLevel: "High",
-    timestamp: "Masaa 2 yaliyopita",
-    read: false,
-    message: "Mvua kubwa inatarajiwa wiki hii. Hakikisha mifereji ya maji inafanya kazi vizuri."
-  },
-  {
-    id: "alert-3",
-    title: "Bei ya Mahindi Imepanda",
-    category: "market delta",
-    riskLevel: "Low",
-    timestamp: "Jana",
-    read: false,
-    message: "Bei ya mahindi imepanda kwa asilimia 2.1 wiki hii katika soko la Arusha. Wakati mzuri wa kuuza."
-  }
-]);
+ const [alerts, setAlerts] = useState<Alert[]>([]);
 
   // Chat conversation logs
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -120,12 +40,18 @@ export default function App() {
   // Connect to Firestore and listen for real farmer data
   // Every time a farmer messages on WhatsApp, this updates automatically
   useEffect(() => {
-    const unsubscribe = listenToFarmers((liveFarmers) => {
-      setFarmers(liveFarmers);
-    });
-    return () => unsubscribe();
-  }, []);
+  const unsubscribe = listenToFarmers((liveFarmers) => {
+    setFarmers(liveFarmers);
+  });
+  return () => unsubscribe();
+}, []);
 
+useEffect(() => {
+  const unsubscribe = listenToAnalyses((liveAnalyses) => {
+    setAnalyses(liveAnalyses);
+  });
+  return () => unsubscribe();
+}, []);
   // Weather index structure
   const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 24,
@@ -442,15 +368,12 @@ export default function App() {
         <main className="flex-1 min-h-0 bg-[#0b0e14] relative">
           <AnimatePresence mode="wait">
             {activeTab === Tab.DASHBOARD && (
-              <DashboardView
-                setActiveTab={setActiveTab}
-                analyses={analyses}
-                alerts={alerts}
-                onSelectAnalysis={(record) => {
-                  setSelectedAnalysisId(record.id);
-                  setActiveTab(Tab.ANALYSIS_RESULTS);
-                }}
-              />
+             <DashboardView
+  setActiveTab={setActiveTab}
+  farmers={farmers}
+  analyses={analyses}
+  alerts={alerts}
+/>
             )}
             {activeTab === Tab.AI_ASSISTANT && (
               <AiAssistantView

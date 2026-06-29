@@ -84,13 +84,15 @@ export interface FarmSettings {
 export interface FarmerProfile {
   farmerId: string;
   name?: string;
-  location?: string;
+  region?: string;
   crops: string[];
   diseases: {
-    date: string;
-    crop: string;
-    diagnosis: string;
-    severity: string;
+    cropType: string | null;
+    diagnosis: string | null;
+    severity: string | null;
+    healthScore: number | null;
+    confidence: number | null;
+    timestamp: string;
   }[];
   conversations: {
     role: "farmer" | "cen";
@@ -98,4 +100,4 @@ export interface FarmerProfile {
     timestamp: string;
   }[];
   lastActive: string;
-}
+}s
