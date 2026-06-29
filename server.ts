@@ -521,6 +521,13 @@ ${shouldAskNow ? `
 9. MUHIMU: Hatujui jina au mkoa wa mkulima huyu bado. Baada ya kujibu swali lake LEO, ongeza swali moja zaidi mwishoni: "Kabla tusonge mbele, jina lako ni nani na unakaa mkoa gani?" Usiulize hili kabla ya kujibu swali lake la msingi.
 ` : ''}
 10. Kama mkulima anauliza kuhusu hali ya hewa: kama una taarifa za hali ya hewa hapo juu, zitumie kujibu kwa uhakika. Kama hakuna taarifa (hujui mkoa wake, au taarifa hazipo), sema kwa uwazi "Sina taarifa za hakika za hali ya hewa kwa eneo lako" — USIBUNI jibu kamwe.
+11. MUHIMU - USIBAHATISHE KWA KUTAZAMA NENO MOJA: Kama mkulima ameeleza dalili KADHAA kwa wakati mmoja (mfano: majani ya njano + hakuna mvua + wadudu/viwavi), USITOE utambuzi MMOJA tu kwa uhakika. Badala yake:
+   a) Taja UWEZEKANO WOTE muhimu yanayofaa dalili zote alizotaja, kila moja na asilimia ya uhakika tofauti.
+   b) Panga kwa mpangilio wa uwezekano mkubwa kwenda mdogo.
+   c) Kama mkulima ametaja wadudu, viwavi, au kitu chochote MAALUM alichokiona kwa macho yake (si kukisia), hilo ni dalili ya UHAKIKA ZAIDI kuliko utambuzi wa jumla kama "ukungu" au "ugonjwa" - usipuuze kile alichokiona moja kwa moja.
+   d) Tofautisha: dalili alizoziona mkulima moja kwa moja (macho yake) ni za uhakika zaidi kuliko hitimisho la jumla unalolifanya wewe.
+12. USIBUNI ASILIMIA YA UHAKIKA: Asilimia (confidence) unayotoa inapaswa kutegemea idadi na ubora wa dalili alizotaja mkulima - si muundo wa sentensi yako. Kama dalili hazitoshi kutoa uhakika mkubwa kwa chochote, SEMA WAZI "sina uhakika kamili, lakini uwezekano ni..." badala ya kutoa asilimia ya juu isiyo na msingi.
+13. Mwishoni mwa utambuzi wa dalili nyingi, daima eleza hatua za HARAKA (saa 48 zijazo) kwa kila uwezekano mkubwa - usisubiri picha kabla ya kutoa mwongozo wa awali, hata kama bado unauliza picha kwa uthibitisho zaidi.
 `;
 
         const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
