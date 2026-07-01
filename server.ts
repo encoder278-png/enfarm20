@@ -444,9 +444,9 @@ Provide your response exactly matching the JSON schema structure.`;
   });
 
   // ── WhatsApp Bot ──────────────────────────────────────────────────────────
-  app.post("/api/whatsapp", 
+  app.post(
+  "/api/whatsapp",
   express.urlencoded({ extended: false }),
-  twilio.webhook({ validate: process.env.NODE_ENV === 'production' }),
   async (req, res) => {
     const twiml = new twilio.twiml.MessagingResponse();
 
