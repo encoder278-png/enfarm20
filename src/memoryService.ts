@@ -89,7 +89,9 @@ export async function saveFarmer(farmerId: string, data: any): Promise<void> {
   try {
     const db = getFirebase();
     const docRef = doc(db, "farmers", farmerId);
-    await setDoc(docRef, data);
+    await setDoc(docRef, data, {
+  merge: true
+});
   } catch (error) {
     handleFirestoreError(error, "WRITE", path);
   }

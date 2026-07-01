@@ -8,6 +8,15 @@ import { getFarmer, saveFarmer } from "./src/memoryService";
 import twilio from "twilio";
 
 dotenv.config();
+import rateLimit from "express-rate-limit";
+
+const aiRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // 20 requests per IP per 15 minutes
+  message: { error: "Too many requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Lazy initialization of Gemini client (images only)
 function getGeminiClient(): GoogleGenAI {
@@ -62,6 +71,90 @@ async function getWeatherForRegion(regionName: string): Promise<string | null> {
     return null;
   }
 }
+function extractProfile(text: string) {
+  const regions = [
+    "mbeya",
+    "iringa",
+    "arusha",
+    "kilimanjaro",
+    "dodoma",
+    "morogoro",
+    "mwanza",
+    "tanga",
+    "singida"
+  ];
+
+  let region = null;
+
+  for (const r of regions) {
+    if (text.toLowerCase().includes(r)) {
+      region = r;
+    }
+  }
+
+  let name = null;
+
+ const patterns=[
+   /mimi ni\s+([a-z]+)/i,
+   /jina langu ni\s+([a-z]+)/i,
+   /naitwa\s+([a-z]+)/i
+ ];
+
+ for(const p of patterns){
+    const m=text.match(p);
+    if(m){
+       name=m[1];
+       break;
+    }
+ }
+
+ return {
+    name,
+    region
+ };
+}
+
+function buildFarmerContext(farmer: any): string {
+  if (!farmer) {
+    return `
+TAARIFA ZA MKULIMA:
+Hakuna historia ya awali.
+`;
+  }
+
+  const recentDiseases = (farmer.diseases || [])
+    .slice(-3)
+    .map((d: any) =>
+      `${d.cropType || "?"}: ${d.diagnosis || "?"} (${d.severity || "?"})`
+    )
+    .join(", ");
+
+  const recentChats = (farmer.conversations || [])
+    .slice(-3)
+    .map((c: any) =>
+      `${c.role}: ${c.text}`
+    )
+    .join("\n");
+
+  return `
+TAARIFA ZA MKULIMA:
+
+Jina:
+${farmer.name || "Haijulikani"}
+
+Mkoa:
+${farmer.region || "Haijulikani"}
+
+Mazao:
+${(farmer.crops || []).join(", ") || "Haijulikani"}
+
+Magonjwa ya hivi karibuni:
+${recentDiseases || "Hakuna"}
+
+Mazungumzo ya hivi karibuni:
+${recentChats || "Hakuna"}
+`;
+}
 
 async function startServer() {
   const app = express();
@@ -85,7 +178,7 @@ async function startServer() {
   });
 
   // API Route: AI Assistant Chat
-  app.post("/api/chat", async (req, res) => {
+  app.post("/api/chat", aiRateLimit, async (req, res) => {
     try {
       const { message, history, farmerId } = req.body;
       if (!message) {
@@ -102,6 +195,9 @@ if (farmerId) {
   }
 }
 
+const memoryContext =
+  buildFarmerContext(farmerMemory);
+
       let client: OpenAI;
       try {
         client = getGroqClient();
@@ -115,17 +211,6 @@ if (farmerId) {
         }
         throw err;
       }
-
-      // Convert history to format chat can understand
-      const memoryContext = farmerMemory
-  ? `
-FARMER MEMORY:
-${JSON.stringify(farmerMemory, null, 2)}
-`
-  : `
-FARMER MEMORY:
-No previous farmer data.
-`;
 
 const systemInstruction = `
 ${memoryContext}
@@ -199,7 +284,7 @@ res.json({
   });
 
   // API Route: Image Leaf Diagnosis — UNCHANGED, still uses Gemini
-  app.post("/api/analyze-image", async (req, res) => {
+  app.post("/api/analyze-image", aiRateLimit, async (req, res) => {
     try {
       const { imageBase64, mimeType, cropTypePrompt } = req.body;
       if (!imageBase64) {
@@ -359,7 +444,10 @@ Provide your response exactly matching the JSON schema structure.`;
   });
 
   // ── WhatsApp Bot ──────────────────────────────────────────────────────────
-  app.post("/api/whatsapp", express.urlencoded({ extended: false }), async (req, res) => {
+  app.post("/api/whatsapp", 
+  express.urlencoded({ extended: false }),
+  twilio.webhook({ validate: process.env.NODE_ENV === 'production' }),
+  async (req, res) => {
     const twiml = new twilio.twiml.MessagingResponse();
 
     try {
@@ -378,14 +466,24 @@ Provide your response exactly matching the JSON schema structure.`;
       if (numMedia > 0) {
         // Farmer sent a PHOTO — UNCHANGED, still uses Gemini
         const imageUrl = req.body.MediaUrl0;
+        // Validate the URL is actually from Twilio's CDN before fetching with credentials
+const twilioMediaHostPattern = /^https:\/\/api\.twilio\.com\//;
+if (!twilioMediaHostPattern.test(imageUrl)) {
+  console.error("Rejected non-Twilio media URL:", imageUrl);
+  replyText = "Samahani, sikuweza kupokea picha. Tuma tena.";
+  twiml.message(replyText);
+  res.writeHead(200, { "Content-Type": "text/xml" });
+  res.end(twiml.toString());
+  return;
+}
 
-        const authString = Buffer.from(
-          `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
-        ).toString("base64");
+const authString = Buffer.from(
+  `${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`
+).toString("base64");
 
-        const imageResp = await fetch(imageUrl, {
-          headers: { Authorization: `Basic ${authString}` },
-        });
+const imageResp = await fetch(imageUrl, {
+  headers: { Authorization: `Basic ${authString}` },
+});
         const imageBuffer = await imageResp.arrayBuffer();
         const base64Image  = Buffer.from(imageBuffer).toString("base64");
         const mimeType     = imageResp.headers.get("content-type") || "image/jpeg";
@@ -445,14 +543,22 @@ Provide your response exactly matching the JSON schema structure.`,
           farmerId,
           diseases: [
             ...((farmer?.diseases || [])),
-            ...(diagnosisRecord ? [{
-              cropType: diagnosisRecord.crop ?? null,
-              diagnosis: diagnosisRecord.diagnosis ?? null,
-              severity: diagnosisRecord.severity ?? null,
-              healthScore: diagnosisRecord.healthScore ?? null,
-              confidence: diagnosisRecord.confidence ?? null,
-              timestamp: new Date().toISOString(),
-            }] : []),
+            ...(diagnosisRecord ? [
+              {
+  cropType: diagnosisRecord.crop ?? null,
+  diagnosis: diagnosisRecord.diagnosis ?? null,
+  severity: diagnosisRecord.severity ?? null,
+  healthScore: diagnosisRecord.healthScore ?? null,
+  confidence: diagnosisRecord.confidence ?? null,
+
+  treatment: diagnosisRecord.recommendations || [],
+
+  outcome: null,
+
+  recoveryDays: null,
+
+  timestamp: new Date().toISOString(),
+}] : []),
           ],
           conversations: [
             ...((farmer?.conversations || []).slice(-9)),
@@ -507,6 +613,22 @@ TAARIFA ZA MKULIMA: Hakuna rekodi ya awali — huyu ni mkulima mpya.
 `;
 // Detect if we still need to collect basic profile info
   const needsProfile = !farmer?.name || !farmer?.region;
+  const extracted =
+   extractProfile(incomingMsg);
+
+if(extracted.name){
+   farmer = {
+      ...(farmer || {}),
+      name: extracted.name
+   };
+}
+
+if(extracted.region){
+   farmer = {
+      ...(farmer || {}),
+      region: extracted.region
+   };
+}
   // Only ASK if we haven't already asked before — avoids nagging every message
   const ASK_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 const lastAsked = farmer?.profileAskedAt ? new Date(farmer.profileAskedAt).getTime() : 0;
@@ -562,7 +684,7 @@ Ukilazimika kuchagua kati ya kuonekana mwerevu au kukiri kutokuwa na uhakika - c
           model: GROQ_MODEL,
           messages,
           max_tokens: 400,
-          temperature: 0.7,
+          temperature: 0.1,
         });
 
         replyText = completion.choices[0]?.message?.content || "Samahani, jaribu tena.";
