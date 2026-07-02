@@ -32,7 +32,7 @@ export default function WeatherIntelligenceView({ weather }: WeatherIntelligence
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-            <CloudSun className="text-emerald-400 w-7 h-7" /> Weather & Microclimate Intelligence
+            <CloudSun className="text-emerald-400 w-7 h-7" /> Weather Center
           </h1>
           <p className="text-sm text-slate-400 mt-1">
             Real-time hyper-local soil sensors, dew point trackers, and satellite predictions.
