@@ -71,47 +71,55 @@ async function getWeatherForRegion(regionName: string): Promise<string | null> {
     return null;
   }
 }
-function extractProfile(text: string) {
+function extractProfile(text: string, justAskedForProfile: boolean = false) {
   const regions = [
-    "mbeya",
-    "iringa",
-    "arusha",
-    "kilimanjaro",
-    "dodoma",
-    "morogoro",
-    "mwanza",
-    "tanga",
-    "singida"
+    "mbeya", "iringa", "arusha", "kilimanjaro", "dodoma",
+    "morogoro", "mwanza", "tanga", "singida"
+  ];
+  const crops = [
+    "mahindi", "muhogo", "mpunga", "alizeti", "maharage", "nyanya"
   ];
 
   let region = null;
-
   for (const r of regions) {
-    if (text.toLowerCase().includes(r)) {
-      region = r;
-    }
+    if (text.toLowerCase().includes(r)) region = r;
+  }
+
+  let crop = null;
+  for (const c of crops) {
+    if (text.toLowerCase().includes(c)) crop = c;
   }
 
   let name = null;
+  const patterns = [
+    /mimi ni\s+([a-z]+)/i,
+    /jina langu ni\s+([a-z]+)/i,
+    /naitwa\s+([a-z]+)/i
+  ];
+  for (const p of patterns) {
+    const m = text.match(p);
+    if (m) { name = m[1]; break; }
+  }
 
- const patterns=[
-   /mimi ni\s+([a-z]+)/i,
-   /jina langu ni\s+([a-z]+)/i,
-   /naitwa\s+([a-z]+)/i
- ];
+  if (!name && justAskedForProfile) {
+    const trimmed = text.trim();
+    const words = trimmed.split(/\s+/).filter(Boolean);
+    const farmingKeywords = /tatizo|ugonjwa|nini|shamba|mvua|dawa/i;
+    const looksLikeBareName =
+      words.length <= 3 &&
+      /^[a-zA-Z\s]+$/.test(trimmed) &&
+      !farmingKeywords.test(trimmed) &&
+      !crops.includes(trimmed.toLowerCase());
 
- for(const p of patterns){
-    const m=text.match(p);
-    if(m){
-       name=m[1];
-       break;
+    if (looksLikeBareName) {
+      const nameWords = words.filter(
+        w => !regions.includes(w.toLowerCase()) && !crops.includes(w.toLowerCase())
+      );
+      if (nameWords.length > 0) name = nameWords[0];
     }
- }
+  }
 
- return {
-    name,
-    region
- };
+  return { name, region, crop };
 }
 
 function buildFarmerContext(farmer: any): string {
@@ -655,27 +663,25 @@ TAARIFA ZA MKULIMA: Hakuna rekodi ya awali — huyu ni mkulima mpya.
 `;
 // Detect if we still need to collect basic profile info
   const needsProfile = !farmer?.name || !farmer?.region;
-  const extracted =
-   extractProfile(incomingMsg);
-
-if(extracted.name){
-   farmer = {
-      ...(farmer || {}),
-      name: extracted.name
-   };
-}
-
-if(extracted.region){
-   farmer = {
-      ...(farmer || {}),
-      region: extracted.region
-   };
-}
   // Only ASK if we haven't already asked before — avoids nagging every message
   const ASK_COOLDOWN_MS = 3 * 24 * 60 * 60 * 1000; // 3 days
 const lastAsked = farmer?.profileAskedAt ? new Date(farmer.profileAskedAt).getTime() : 0;
 const cooldownPassed = Date.now() - lastAsked > ASK_COOLDOWN_MS;
 const shouldAskNow = needsProfile && (!farmer?.profileAskedAt || cooldownPassed);
+
+  const extracted = extractProfile(incomingMsg, shouldAskNow || !!farmer?.profileAskedAt);
+
+if(extracted.name){
+   farmer = { ...(farmer || {}), name: extracted.name };
+}
+
+if(extracted.region){
+   farmer = { ...(farmer || {}), region: extracted.region };
+}
+
+if(extracted.crop && !(farmer?.crops || []).includes(extracted.crop)){
+   farmer = { ...(farmer || {}), crops: [...(farmer?.crops || []), extracted.crop] };
+}
 
  const systemInstruction = `
 ${memoryContext}
@@ -689,7 +695,7 @@ MUKTADHA: Nyanda za Juu Kusini (Iringa, Njombe, Mbeya, Songwe, Rukwa) ni ghala k
 SHERIA ZA MSINGI:
 1. Jibu kwa Kiswahili rahisi, MAFUPI - mkulima anasoma kwenye simu ndogo. USITUMIE vichwa vya habari virefu (UCHAMBUZI:, SABABU:, n.k) - andika kama mazungumzo ya kawaida, si ripoti.
 2. Kama unajua jina la mkulima, mtumie. Usiulize tena jina/mkoa ulizojua tayari.
-${shouldAskNow ? `3. Hatujui jina/mkoa wake - uliza kwa upole MWISHONI baada ya kujibu swali lake.` : ''}
+${shouldAskNow ? `3. Hatujui jina, mkoa, au zao lake bado - uliza kwa upole MWISHONI baada ya kujibu swali lake, kwa mfano: "Kabla tusonge mbele, jina lako ni nani, unakaa mkoa gani, na unalima zao gani?"` : ''}
 4. Tumia historia ya magonjwa/mazungumzo uliyo nayo ili kuunganisha na hali ya zamani.
 
 USIBAHATISHE:
@@ -736,29 +742,58 @@ Ukilazimika kuchagua kati ya kuonekana mwerevu au kukiri kutokuwa na uhakika - c
 
         replyText = completion.choices[0]?.message?.content || "Samahani, jaribu tena.";
 
-        // Lightweight name/region extraction from farmer's NEXT message (not this one)
-        // Run this check on the INCOMING message, in case farmer already answered last time we asked
+        // Run remaining extraction calls in PARALLEL, not one-after-another — cuts latency significantly
+        const extractionPromises: Promise<void>[] = [];
+
         if (needsProfile) {
-          const extraction = await groqClient.chat.completions.create({
+          extractionPromises.push(
+            groqClient.chat.completions.create({
+              model: GROQ_MODEL,
+              messages: [{
+                role: "system",
+                content: `Toa jina na mkoa kutoka kwenye ujumbe huu kama vipo. Jibu JSON tu: {"name": "..." au null, "region": "..." au null}. Kama hakuna taarifa, rudisha null kwa vyote.`
+              }, {
+                role: "user",
+                content: incomingMsg
+              }],
+              max_tokens: 80,
+              temperature: 0,
+            }).then((extraction) => {
+              try {
+                const parsed = JSON.parse(
+                  (extraction.choices[0]?.message?.content || "{}").replace(/```json|```/g, "").trim()
+                );
+                if (parsed.name) farmer = { ...(farmer || {}), name: parsed.name };
+                if (parsed.region) farmer = { ...(farmer || {}), region: parsed.region };
+              } catch { /* ignore parse failures */ }
+            }).catch(() => {})
+          );
+        }
+        // Check if this exchange was a diagnosis worth logging structurally — runs in parallel too
+        let textDiagnosis: any = null;
+        extractionPromises.push(
+          groqClient.chat.completions.create({
             model: GROQ_MODEL,
             messages: [{
               role: "system",
-              content: `Toa jina na mkoa kutoka kwenye ujumbe huu kama vipo. Jibu JSON tu: {"name": "..." au null, "region": "..." au null}. Kama hakuna taarifa, rudisha null kwa vyote.`
+              content: `Angalia mazungumzo haya. Kama CEN alitoa UTAMBUZI wa tatizo la zao (ugonjwa, wadudu, upungufu wa virutubisho) - si swali la jumla wala salamu - toa JSON: {"isDiagnosis": true, "cropType": "...", "diagnosis": "...", "severity": "Mild/Moderate/Severe au null", "confidence": 0.0-1.0}. Kama sio utambuzi, rudisha {"isDiagnosis": false}.`
             }, {
               role: "user",
-              content: incomingMsg
+              content: `Mkulima: ${incomingMsg}\nCEN: ${replyText}`
             }],
-            max_tokens: 80,
+            max_tokens: 150,
             temperature: 0,
-          });
-          try {
-            const parsed = JSON.parse(
-              (extraction.choices[0]?.message?.content || "{}").replace(/```json|```/g, "").trim()
-            );
-            if (parsed.name) farmer = { ...(farmer || {}), name: parsed.name };
-            if (parsed.region) farmer = { ...(farmer || {}), region: parsed.region };
-          } catch { /* ignore parse failures, don't block the reply */ }
-        }
+          }).then((diagExtraction) => {
+            try {
+              const parsed = JSON.parse(
+                (diagExtraction.choices[0]?.message?.content || "{}").replace(/```json|```/g, "").trim()
+              );
+              if (parsed.isDiagnosis) textDiagnosis = parsed;
+            } catch { /* ignore parse failures */ }
+          }).catch(() => {})
+        );
+
+        await Promise.all(extractionPromises);
 
         // Save to Firestore — UNCHANGED
         const updated = {
@@ -768,6 +803,17 @@ Ukilazimika kuchagua kati ya kuonekana mwerevu au kukiri kutokuwa na uhakika - c
   name: farmer?.name ?? null,
   region: farmer?.region ?? null,
   profileAskedAt: (shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt) ?? null,
+  diseases: [
+    ...((farmer?.diseases || [])),
+    ...(textDiagnosis ? [{
+      cropType: textDiagnosis.cropType ?? null,
+      diagnosis: textDiagnosis.diagnosis ?? null,
+      severity: textDiagnosis.severity ?? null,
+      healthScore: null,
+      confidence: textDiagnosis.confidence ?? null,
+      timestamp: new Date().toISOString(),
+    }] : []),
+  ],
       conversations: [
     ...((farmer?.conversations || []).slice(-9)),
     { role: "farmer", text: incomingMsg, timestamp: new Date().toISOString() },
