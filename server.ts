@@ -155,6 +155,39 @@ Mazungumzo ya hivi karibuni:
 ${recentChats || "Hakuna"}
 `;
 }
+function buildFarmerReport(farmer: any): string {
+  if (!farmer || !(farmer.conversations?.length || farmer.diseases?.length)) {
+    return "Bado hujaanza kutumia EnFarm. Tuma swali lako la kwanza la kilimo ili nianze kukusaidia!";
+  }
+
+  const joinedDate = farmer.joinedAt
+    ? new Date(farmer.joinedAt).toLocaleDateString("sw-TZ", { day: "numeric", month: "long", year: "numeric" })
+    : "Haijulikani";
+
+  const totalQuestions = (farmer.conversations || []).filter((c: any) => c.role === "farmer").length;
+  const totalDiagnoses = (farmer.diseases || []).length;
+
+  const diseaseList = (farmer.diseases || [])
+    .slice(-5)
+    .map((d: any, i: number) => {
+      const date = d.timestamp ? new Date(d.timestamp).toLocaleDateString("sw-TZ", { day: "numeric", month: "short" }) : "?";
+      return `${i + 1}. ${d.cropType || "Zao lisilojulikana"}: ${d.diagnosis || "?"} (${date})`;
+    })
+    .join("\n");
+
+  return `*RIPOTI YAKO - EnFarm*
+
+Jina: ${farmer.name || "Haijulikani"}
+Mkoa: ${farmer.region || "Haijulikani"}
+Umetumia EnFarm tangu: ${joinedDate}
+
+Maswali uliyouliza: ${totalQuestions}
+Uchunguzi wa picha: ${totalDiagnoses}
+
+${totalDiagnoses > 0 ? `*Magonjwa/matatizo ya hivi karibuni:*\n${diseaseList}` : "Bado hujatuma picha yoyote ya uchunguzi."}
+
+Endelea kutumia EnFarm kupata msaada zaidi wa shamba lako!`;
+}
 
 async function startServer() {
   const app = express();
@@ -463,6 +496,14 @@ Provide your response exactly matching the JSON schema structure.`;
 
       let replyText = "";
 
+      if (incomingMsg.trim().toLowerCase() === "/repoti") {
+        replyText = buildFarmerReport(farmer);
+        twiml.message(replyText);
+        res.writeHead(200, { "Content-Type": "text/xml" });
+        res.end(twiml.toString());
+        return;
+      }
+
       if (numMedia > 0) {
         // Farmer sent a PHOTO — UNCHANGED, still uses Gemini
         const imageUrl = req.body.MediaUrl0;
@@ -541,6 +582,7 @@ Provide your response exactly matching the JSON schema structure.`,
         const updated = {
           ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
           farmerId,
+          joinedAt: farmer?.joinedAt ?? new Date().toISOString(),
           diseases: [
             ...((farmer?.diseases || [])),
             ...(diagnosisRecord ? [
@@ -722,6 +764,7 @@ Ukilazimika kuchagua kati ya kuonekana mwerevu au kukiri kutokuwa na uhakika - c
         const updated = {
   ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
   farmerId,
+  joinedAt: farmer?.joinedAt ?? new Date().toISOString(),
   name: farmer?.name ?? null,
   region: farmer?.region ?? null,
   profileAskedAt: (shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt) ?? null,
