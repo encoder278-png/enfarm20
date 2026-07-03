@@ -32,15 +32,17 @@ export default function WhatsAppChatView({ farmers, selectedFarmer, onSelectFarm
     setSending(true);
 
     try {
-      const response = await fetch("/api/whatsapp-send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          to: selectedFarmer.farmerId.replace("wa_", "+"),
-          message: message.trim(),
-        }),
-      });
-
+     const response = await fetch("/api/whatsapp-send", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-admin-key": import.meta.env.VITE_ADMIN_API_KEY || "",
+  },
+  body: JSON.stringify({
+    to: selectedFarmer.farmerId.replace("wa_", "+"),
+    message: message.trim(),
+  }),
+});
       if (response.ok) {
         setSentMessages((prev) => [
           ...prev,

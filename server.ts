@@ -770,6 +770,10 @@ try { await saveFarmer(farmerId, updated); } catch (err) { console.error("Save f
   // Manual reply from admin to farmer via WhatsApp — UNCHANGED
   app.post("/api/whatsapp-send", async (req, res) => {
     try {
+      const providedKey = req.headers["x-admin-key"];
+      if (!providedKey || providedKey !== process.env.ADMIN_API_KEY) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
       const { to, message } = req.body;
       if (!to || !message) {
         return res.status(400).json({ error: "to and message are required" });
