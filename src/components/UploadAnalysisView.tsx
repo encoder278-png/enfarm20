@@ -115,7 +115,7 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
     >
       <div>
         <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-          <UploadCloud className="text-emerald-400 w-7 h-7" /> Upload Foliage Analysis
+          <UploadCloud className="text-emerald-400 w-7 h-7" /> Uploading & Analysis center
         </h1>
         <p className="text-sm text-slate-400 mt-1">
           Provide farm leaf photos to automatically detect bacterial, fungal pathogena, or soil mineral shortages.

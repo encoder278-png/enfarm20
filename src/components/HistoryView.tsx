@@ -34,7 +34,7 @@ export default function HistoryView({
     >
       <div>
         <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-          <History className="text-emerald-400 w-7 h-7" /> Timeline Log & Pathology History
+          <History className="text-emerald-400 w-7 h-7" /> history
         </h1>
         <p className="text-sm text-slate-400 mt-1">
           Historical overview of crop diagnostics, vegetation index logging, and drone sensor history.
