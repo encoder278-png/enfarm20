@@ -768,7 +768,7 @@ try { await saveFarmer(farmerId, updated); } catch (err) { console.error("Save f
   });
 
   // Manual reply from admin to farmer via WhatsApp — UNCHANGED
-  app.post("/api/whatsapp-send", async (req, res) => {
+  app.post("/api/whatsapp-send", aiRateLimit, async (req, res) => {
     try {
       const providedKey = req.headers["x-admin-key"];
       if (!providedKey || providedKey !== process.env.ADMIN_API_KEY) {
@@ -802,7 +802,7 @@ try { await saveFarmer(farmerId, updated); } catch (err) { console.error("Save f
   });
 
   // API Route: AI recommendations — switched to Groq
-  app.get("/api/recommendations", async (req, res) => {
+  app.get("/api/recommendations", aiRateLimit, async (req, res) => {
   const fallback = {
     pestControl: "Angalia mashamba yako asubuhi kwa dalili za viwavi au wadudu wengine.",
     irrigation: "Mwagilia mimea yako asubuhi na mapema — lita 2 kwa kila mmea.",
