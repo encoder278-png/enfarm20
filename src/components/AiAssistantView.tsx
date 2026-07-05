@@ -50,7 +50,7 @@ export default function AiAssistantView({
           <Bot className="text-emerald-400 w-7 h-7" /> EnFarm AI Assistant
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          Chat with an elite agronomist and plant pathologist powered by real-time Google Search Grounding.
+          Chat with enfarm ai
         </p>
       </div>
 
