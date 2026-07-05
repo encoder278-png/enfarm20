@@ -35,7 +35,7 @@ export default function WeatherIntelligenceView({ weather }: WeatherIntelligence
             <CloudSun className="text-emerald-400 w-7 h-7" /> Weather Center
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Real-time hyper-local soil sensors, dew point trackers, and satellite predictions.
+            Real-time weather informations
           </p>
         </div>
         
