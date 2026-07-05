@@ -54,7 +54,7 @@ export default function RecommendationsView() {
             <Lightbulb className="text-emerald-400 w-7 h-7" /> AI Recommendations
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Real-time advisory nodes generated dynamically by Gemini AI matching your current microclimate.
+            Real-time advices for your crops
           </p>
         </div>
         
