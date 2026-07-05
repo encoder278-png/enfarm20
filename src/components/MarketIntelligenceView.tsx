@@ -32,7 +32,7 @@ export default function MarketIntelligenceView({ prices }: MarketIntelligenceVie
           <TrendingUp className="text-emerald-400 w-7 h-7" /> Market Center
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          Monitor crop futures, contract multipliers, and forecast localized harvest values instantly.
+          look for crop prices
         </p>
       </div>
 
