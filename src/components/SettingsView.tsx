@@ -49,8 +49,8 @@ export default function SettingsView({ settings, onSaveSettings }: SettingsViewP
           <Settings className="text-emerald-400 w-7 h-7" /> Settings 
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          Configure farm sizes, adjust alert thresholds, and review agricultural sensor integrations.
-        </p>
+  Manage your farm profile and notification preferences.
+</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -80,7 +80,7 @@ export default function SettingsView({ settings, onSaveSettings }: SettingsViewP
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-400 font-medium">GIS Coordinates / Regional Location</label>
+              <label className="text-xs text-slate-400 font-medium">Region</label>
               <input
                 type="text"
                 value={location}
@@ -100,28 +100,28 @@ export default function SettingsView({ settings, onSaveSettings }: SettingsViewP
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-400 font-medium">Soil Clay/Silt Consistency</label>
+              <label className="text-xs text-slate-400 font-medium">Soil Type</label>
               <select
                 value={soilType}
                 onChange={(e) => setSoilType(e.target.value)}
                 className="w-full bg-[#0d121c] border border-slate-800 text-xs text-slate-350 pr-4 px-3.5 py-2.5 rounded-xl text-white focus:outline-none focus:border-emerald-500/50"
               >
-                <option value="Loamy Silt">Loamy Silt (High Nitrogen retention)</option>
-                <option value="Sandy Clay">Sandy Clay (Rapid drainage)</option>
-                <option value="Silty Silt">Silty Silt (Standard moisture cap)</option>
+                <option value="Volcanic soil">Volcanic soil</option>
+                <option value="Clay soil">Clay soil</option>
+                <option value="Sandy soil">Sandy soil</option>
               </select>
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-slate-400 font-medium font-sans">Irrigation System Method</label>
+              <label className="text-xs text-slate-400 font-medium font-sans">Watering Method</label>
               <select
                 value={irrigation}
                 onChange={(e) => setIrrigation(e.target.value)}
                 className="w-full bg-[#0d121c] border border-slate-800 text-xs pr-4 px-3.5 py-2.5 rounded-xl text-white focus:outline-none focus:border-emerald-500/50"
               >
-                <option value="Precision Drip Pivot">Precision Drip Pivot (Water conservative)</option>
-                <option value="Overhead Lateral Sprinklers">Overhead Lateral Sprinklers</option>
-                <option value="Surface Flooding Gate">Surface Flooding Gate</option>
+                <option value="Hand watering">Hand watering</option>
+                <option value="Rain-fed">Rain-fed only</option>
+                <option value="Basic irrigation">Basic irrigation</option>
               </select>
             </div>
           </div>
@@ -131,8 +131,8 @@ export default function SettingsView({ settings, onSaveSettings }: SettingsViewP
           <div className="space-y-3.5 font-sans">
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-905/30 border border-slate-800 bg-[#0d121c]/45">
               <div>
-                <span className="text-xs font-bold text-slate-200 block">Critical Sensor Push Alerts</span>
-                <span className="text-[10px] text-slate-500 mt-0.5">Alert if temperature surpasses 32°C or moisture indices collapse.</span>
+                <span className="text-xs font-bold text-slate-200 block">Weather Alerts</span>
+<span className="text-[10px] text-slate-500 mt-0.5">Notify when heavy rain or drought risk is detected for a farmer's region.</span>
               </div>
               <button
                 type="button"
@@ -145,8 +145,8 @@ export default function SettingsView({ settings, onSaveSettings }: SettingsViewP
 
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-905/30 border border-slate-800 bg-[#0d121c]/45">
               <div>
-                <span className="text-xs font-bold text-slate-200 block">Google Search Grounding Synced</span>
-                <span className="text-[10px] text-slate-500 mt-0.5">Augments chatbot replies with dynamic global agriculture event logs.</span>
+                <span className="text-xs font-bold text-slate-200 block">Auto Farmer Follow-ups</span>
+<span className="text-[10px] text-slate-500 mt-0.5">Enable CEN to check in with farmers after a diagnosis (coming soon).</span>
               </div>
               <button
                 type="button"
@@ -177,29 +177,23 @@ export default function SettingsView({ settings, onSaveSettings }: SettingsViewP
           </button>
         </form>
 
-        {/* Secret guidance panel (4 cols) */}
+        {/* System status panel (4 cols) */}
         <div className="lg:col-span-4 bg-[#151c28] border border-slate-800 p-6 rounded-2xl space-y-5">
           <div className="flex items-center gap-2">
             <Key className="w-5 h-5 text-emerald-400" />
-            <h3 className="text-sm font-semibold text-white">Full-Stack API Integrations</h3>
+            <h3 className="text-sm font-semibold text-white">About EnFarm</h3>
           </div>
 
           <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800/40 space-y-3">
-            <span className="text-[10px] font-bold text-emerald-400 font-mono tracking-widest block uppercase">Telemetry Setup Code</span>
-            <p className="text-xs text-slate-400 leading-relaxed font-sans select-text">
-              We have completed full-stack modular structures with custom Express services proxying requests elegantly to the latest Google GenAI model.
+            <p className="text-xs text-slate-400 leading-relaxed font-sans">
+              EnFarm is an AI-powered crop assistant for smallholder farmers in Tanzania, available via WhatsApp in Swahili.
             </p>
-            <p className="text-[11px] text-slate-400 font-normal leading-normal font-sans pt-1 select-text">
-              To trigger actual AI insights inside **AI Assistant** or **Upload Leaf Pathology**, add your Gemini API key in the AI Studio Settings panel:
+            <p className="text-[11px] text-slate-400 font-normal leading-normal font-sans pt-1">
+              Text diagnoses are powered by Groq, and photo diagnoses by Google's Gemini AI.
             </p>
-            
-            <div className="bg-[#0b0e14] p-3 rounded-lg border border-slate-800 text-center text-xs text-emerald-400 selection:bg-emerald-500/20 py-2.5 font-mono select-all">
-              GEMINI_API_KEY
-            </div>
-
-            <p className="text-[11px] text-slate-450 text-slate-400 flex items-start gap-1.5 leading-normal pt-1.5 select-text">
+            <p className="text-[11px] text-slate-450 text-slate-400 flex items-start gap-1.5 leading-normal pt-1.5">
               <Info className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-              <span>We set up your API key automatically. You can review and update this configuration in the **Settings &gt; Secrets** panel in Google AI Studio anytime.</span>
+              <span>Built by a student in Tanzania to help farmers get faster, more reliable crop advice.built by EDSON EDWIN MOSHI</span>
             </p>
           </div>
         </div>

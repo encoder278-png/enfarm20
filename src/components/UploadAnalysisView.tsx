@@ -18,25 +18,25 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
   // This allows immediate testing of the AI Pathology Engine!
   const sampleLeaves = [
     {
-      id: "leaf-rust-wheat",
-      label: "Rust Infected Wheat",
-      crop: "Wheat",
-      description: "Orange-brown pustule blisters on upper foliage",
-      // Simple base64 red/orange rust leaf representation
+      id: "armyworm-mahindi",
+      label: "Fall Armyworm on Maize",
+      crop: "Mahindi",
+      description: "Chewed leaf edges and holes from caterpillar feeding",
+      // Illustrative placeholder — not a real photo
       dataUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'><rect width='100' height='100' fill='%231e293b'/><ellipse cx='50' cy='50' rx='25' ry='40' fill='%2322c55e' transform='rotate(15 50 50)'/><path d='M30 40 Q40 50 50 42 T70 38' stroke='%23f97316' stroke-width='4' fill='none'/><circle cx='42' cy='35' r='3' fill='%23ea580c'/><circle cx='54' cy='48' r='2' fill='%23ea580c'/><circle cx='48' cy='58' r='3' fill='%23ea580c'/><circle cx='58' cy='32' r='2' fill='%23b45309'/><circle cx='38' cy='52' r='4' fill='%23b45309'/></svg>"
     },
     {
-      id: "blight-tomato",
-      label: "Blight Tomato Foliage",
-      crop: "Tomato",
-      description: "Defoliation and concentric brown rings",
+      id: "mosaic-muhogo",
+      label: "Cassava Mosaic Disease",
+      crop: "Muhogo",
+      description: "Yellow-green mottled pattern on leaves",
       dataUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'><rect width='100' height='100' fill='%231e293b'/><path d='M50 15 C20 45 35 85 50 85 C65 85 80 45 50 15 Z' fill='%234ade80'/><circle cx='42' cy='45' r='8' fill='%2378350f' opacity='0.75'/><circle cx='42' cy='45' r='4' fill='%23451a03'/><circle cx='58' cy='62' r='10' fill='%2378350f' opacity='0.75'/><circle cx='58' cy='62' r='5' fill='%23451a03'/><line x1='50' y1='15' x2='50' y2='85' stroke='%2315803d' stroke-width='2'/></svg>"
     },
     {
-      id: "healthy-corn",
-      label: "Healthy Corn Sprout",
-      crop: "Corn",
-      description: "Dense chlorophyll cells and strong cellular turgor",
+      id: "healthy-mahindi",
+      label: "Healthy Maize Leaf",
+      crop: "Mahindi",
+      description: "Even green color, no visible damage",
       dataUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'><rect width='100' height='100' fill='%231e293b'/><ellipse cx='50' cy='50' rx='18' ry='42' fill='%2310b981' transform='rotate(-10 50 50)'/><line x1='50' y1='10' x2='42' y2='90' stroke='%23047857' stroke-width='2.5'/><ellipse cx='42' cy='45' rx='6' ry='12' fill='%2334d399' transform='rotate(30 42 45)'/></svg>"
     }
   ];
@@ -114,12 +114,12 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
       className="p-6 h-full overflow-y-auto pr-4 space-y-6"
     >
       <div>
-        <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-          <UploadCloud className="text-emerald-400 w-7 h-7" /> Uploading & Analysis center
-        </h1>
-        <p className="text-sm text-slate-400 mt-1">
-          Provide farm leaf photos to automatically detect bacterial, fungal pathogena, or soil mineral shortages.
-        </p>
+       <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
+  <UploadCloud className="text-emerald-400 w-7 h-7" /> Upload & Analyze
+</h1>
+<p className="text-sm text-slate-400 mt-1">
+  Upload a crop photo to detect diseases, pests, or nutrient deficiencies using AI.
+</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -203,7 +203,7 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
               <HelpCircle className="w-4 h-4 text-emerald-400" /> Specify Crop Variety
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {["Auto-Detect", "Wheat", "Tomato", "Corn", "Soybeans"].map((crop) => (
+              {["Auto-Detect", "Mahindi", "Muhogo", "Mpunga", "Alizeti", "Maharage"].map((crop) => (
                 <button
                   key={crop}
                   type="button"
@@ -220,8 +220,8 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
               ))}
             </div>
             <p className="text-[11px] text-slate-450 text-slate-400 leading-relaxed font-sans mt-2">
-              Auto-Detect uses Gemini's deep visual catalog to cross-reference plant structure, venation grids, and pixel coordinates.
-            </p>
+  Auto-Detect lets Gemini identify the crop automatically from the photo.
+</p>
           </div>
 
           {/* Submit Action Button */}
@@ -233,12 +233,12 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
             {isAnalyzing ? (
               <>
                 <Cpu className="w-5 h-5 animate-spin" />
-                <span>Running Al Pathological Assay...</span>
+                <span>Analyzing...</span>
               </>
             ) : (
               <>
                 <Cpu className="w-5 h-5" />
-                <span>Analyze Leaf Pathology</span>
+<span>Analyze Crop Photo</span>
               </>
             )}
           </button>
@@ -248,10 +248,10 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
         {/* Right Test Samples Panel (5 cols) */}
         <div className="lg:col-span-5 bg-[#151c28] border border-slate-800 rounded-2xl p-6 space-y-4">
           <div>
-            <h3 className="text-sm font-semibold text-white">Instant Diagnostics Testing</h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Select one of our calibrated lab pathology files below to immediately experience the AI diagnosis flow.
-            </p>
+            <h3 className="text-sm font-semibold text-white">Try a Sample</h3>
+<p className="text-xs text-slate-400 mt-1">
+  These are illustrative placeholder images to demo the analysis flow — try uploading a real crop photo for an actual diagnosis.
+</p>
           </div>
 
           <div className="space-y-3">
@@ -279,7 +279,7 @@ export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: Uplo
           <div className="bg-[#1e2736]/30 border border-slate-800/40 p-4 rounded-xl flex gap-3">
             <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
             <div className="text-xs text-slate-400 leading-normal">
-              <strong>Real-Time API:</strong> Back-end queries Gemini 3.5 Pathologist instantly. It generates health scores, determines risk categorizations, is non-destructive, and gives recommendations.
+              <strong>How it works:</strong> Your photo is analyzed by Google's Gemini AI, which returns a health score, risk level, and treatment recommendations in Swahili.
             </div>
           </div>
         </div>

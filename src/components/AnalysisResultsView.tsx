@@ -65,10 +65,10 @@ export default function AnalysisResultsView({
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-            <Activity className="text-emerald-400 w-7 h-7" /> Analysis Results & Prescriptions
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Detailed botanical diagnosis, pathology classifications, and treatment prescriptions.
+  <Activity className="text-emerald-400 w-7 h-7" /> Crop Diagnosis History
+</h1>
+<p className="text-sm text-slate-400 mt-1">
+  AI-generated diagnoses from photos and farmer conversations via WhatsApp.
           </p>
         </div>
         <button 
@@ -128,7 +128,7 @@ export default function AnalysisResultsView({
           {/* Main info header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/50 pb-5">
             <div>
-              <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Crop Pathology Report</span>
+              <span className="text-xs font-bold text-emerald-400 uppercase tracking-widest">Diagnosis Record</span>
               <h2 className="text-xl font-display font-bold text-white mt-1">
                 {activeRecord.cropType}
               </h2>
@@ -180,22 +180,22 @@ export default function AnalysisResultsView({
                 </div>
               </div>
               <div className="space-y-1.5 min-w-0">
-                <h3 className="text-sm font-semibold text-slate-200">Foliage Vitality Rating</h3>
-                <p className="text-xs text-slate-400 leading-normal">
-                  Identified standard chlorophyll retention, moisture turgidity, and protein distribution levels.
-                </p>
-              </div>
+  <h3 className="text-sm font-semibold text-slate-200">Crop Health Score</h3>
+  <p className="text-xs text-slate-400 leading-normal">
+    AI-estimated health based on the reported or photographed symptoms.
+  </p>
+</div>
             </div>
 
             {/* Pathological classification indicators */}
             <div className="space-y-3.5">
               <div className="p-3.5 rounded-2xl bg-slate-900/40 border border-slate-800/40 flex justify-between items-center">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium"><ShieldCheck className="w-4 h-4 text-emerald-400" /> Agronomist Confidence</span>
-                <span className="text-xs font-mono font-bold text-white bg-[#1e2736]/40 px-2 py-1 rounded">{(activeRecord.confidence * 100).toFixed(0)}% accuracy</span>
+               <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium"><ShieldCheck className="w-4 h-4 text-emerald-400" /> AI Confidence</span>
+<span className="text-xs font-mono font-bold text-white bg-[#1e2736]/40 px-2 py-1 rounded">{(activeRecord.confidence * 100).toFixed(0)}%</span>
               </div>
               
               <div className="p-3.5 rounded-2xl bg-slate-900/40 border border-slate-800/40 flex justify-between items-center">
-                <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium"><AlertTriangle className="w-4 h-4 text-amber-500" /> Pathology Risk Factor</span>
+                <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium"><AlertTriangle className="w-4 h-4 text-amber-500" /> Risk Level</span>
                 <span className={`text-xs font-sans font-bold px-2 py-0.5 rounded uppercase tracking-wide ${
                   activeRecord.riskLevel === 'Low' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
                   activeRecord.riskLevel === 'Medium' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
@@ -209,7 +209,7 @@ export default function AnalysisResultsView({
 
           {/* Diagnosis Block */}
           <div className="p-4 rounded-2xl bg-[#0d121c]/60 border border-slate-800/80">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1.5"><Compass className="w-4 h-4 text-emerald-400" /> Diagnostic Summary Node</h3>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide flex items-center gap-1.5"><Compass className="w-4 h-4 text-emerald-400" /> Diagnosis</h3>
             <p className="text-sm font-semibold text-white mt-2 select-text">{activeRecord.diagnose}</p>
             <p className="text-xs text-slate-300 mt-1.5 leading-relaxed selection:bg-emerald-500/20 select-text">
               {activeRecord.diagnose}
@@ -218,7 +218,7 @@ export default function AnalysisResultsView({
 
           {/* Actionable Prescriptions Section */}
           <div className="space-y-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Agronomist Actions & Prescriptions</h3>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wide">Recommended Actions</h3>
             
             <div className="grid grid-cols-1 gap-2.5">
               {activeRecord.recommendations.map((rec, index) => (
