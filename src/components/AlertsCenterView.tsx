@@ -45,7 +45,7 @@ export default function AlertsCenterView({
             <Bell className="text-emerald-400 w-7 h-7" /> Alerts & Threat Center
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Track urgent anomalies reported by farm sensor grids and localized drone runs.
+            alerts center 
           </p>
         </div>
         
