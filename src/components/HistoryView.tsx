@@ -37,7 +37,7 @@ export default function HistoryView({
           <History className="text-emerald-400 w-7 h-7" /> history
         </h1>
         <p className="text-sm text-slate-400 mt-1">
-          Historical overview of crop diagnostics, vegetation index logging, and drone sensor history.
+          look up for your previews d info.
         </p>
       </div>
 
