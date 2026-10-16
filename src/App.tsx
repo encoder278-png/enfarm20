@@ -17,12 +17,7 @@ import { listenToFarmers, listenToAnalyses } from "./firestoreService";
 import { Bell, Search, Sun, SunDim, ChevronDown, Leaf, Loader2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 
-type AppProps = {
-  organizationId: string;
-  role: "admin" | "field_officer";
-};
-
-export default function App({ organizationId, role }: AppProps) {
+export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.DASHBOARD);
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
   
@@ -44,22 +39,19 @@ export default function App({ organizationId, role }: AppProps) {
 
   // Connect to Firestore and listen for real farmer data
   // Every time a farmer messages on WhatsApp, this updates automatically
- useEffect(() => {
-  const unsubscribe = listenToFarmers(organizationId, (liveFarmers) => {
+  useEffect(() => {
+  const unsubscribe = listenToFarmers((liveFarmers) => {
     setFarmers(liveFarmers);
   });
-
   return () => unsubscribe();
-}, [organizationId]);
+}, []);
 
 useEffect(() => {
-  const unsubscribe = listenToAnalyses(organizationId, (liveAnalyses) => {
+  const unsubscribe = listenToAnalyses((liveAnalyses) => {
     setAnalyses(liveAnalyses);
   });
-
   return () => unsubscribe();
-}, [organizationId]);
-
+}, []);
   // Weather index structure
   const [weatherData, setWeatherData] = useState<WeatherData>({
     temperature: 24,
