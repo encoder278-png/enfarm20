@@ -83,6 +83,7 @@ export interface FarmSettings {
 }
 export interface FarmerProfile {
   farmerId: string;
+  organizationId?: string;
   name?: string;
   region?: string;
   crops: string[];

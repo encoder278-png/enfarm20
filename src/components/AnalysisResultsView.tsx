@@ -33,8 +33,8 @@ export default function AnalysisResultsView({
     return (
       <div className="p-6 text-center my-auto">
         <FileText className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-        <h3 className="text-white text-lg font-bold">No pathology records logged yet</h3>
-        <p className="text-slate-400 text-sm mt-1">Upload a crop photo in foliage analysis to start.</p>
+       <h3 className="text-white text-lg font-bold">No diagnoses logged yet</h3>
+<p className="text-slate-400 text-sm mt-1">Diagnoses appear here once a farmer sends a photo or describes a problem via WhatsApp.</p>
         <button
           onClick={() => setActiveTab(Tab.UPLOAD_ANALYSIS)}
           className="mt-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-4 py-2 rounded-xl text-xs font-bold font-display tracking-wider uppercase cursor-pointer"
