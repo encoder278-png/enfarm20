@@ -39,7 +39,7 @@ function getGroqClient(): OpenAI {
   });
 }
 
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_MODEL = "openai/gpt-oss-120b";
 
 // Approximate coordinates for Tanzania regions — add more as real farmers mention them
 const TANZANIA_REGION_COORDS: Record<string, { lat: number; lon: number }> = {
