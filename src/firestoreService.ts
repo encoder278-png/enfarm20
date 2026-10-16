@@ -1,145 +1,112 @@
-
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   getFirestore,
   collection,
   onSnapshot,
   query,
-  where,
-  type Firestore,
+  type Firestore
 } from "firebase/firestore";
-import type { FarmerProfile, AnalysisRecord } from "./types";
+import { FarmerProfile, AnalysisRecord } from "./types";
 
+// ── Initialize Firebase for the FRONTEND ─────────────────────────────────
+// This uses your VITE_ environment variables which are safe for the browser.
+// These are different from your backend variables in memoryService.ts.
 function getDb(): Firestore {
-  const apps = getApps();
-
-  if (apps.length > 0) {
+  if (getApps().length > 0) {
     return getFirestore(getApp());
   }
-
   const app = initializeApp({
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId:         import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket:     import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    appId:             import.meta.env.VITE_FIREBASE_APP_ID,
   });
-
   return getFirestore(app);
 }
 
+// ── Listen to ALL farmers in real time ────────────────────────────────────
+// This is a LIVE listener. Every time a farmer sends a WhatsApp message
+// and gets saved to Firestore by your server, this fires automatically
+// and updates your admin panel without any refresh.
+//
+// Returns an unsubscribe function — call it when the component unmounts.
 export function listenToFarmers(
-  organizationId: string,
   callback: (farmers: FarmerProfile[]) => void
 ): () => void {
-  if (!organizationId.trim()) {
-    callback([]);
-    return () => {};
-  }
-
   try {
-    const q = query(
-      collection(getDb(), "farmers"),
-      where("organizationId", "==", organizationId)
-    );
+    const db = getDb();
+    const q = query(collection(db, "farmers"));
 
-    return onSnapshot(
+    const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const farmers = snapshot.docs.map(
-          (document) => document.data() as FarmerProfile
+        const farmers = snapshot.docs.map((d) => d.data() as FarmerProfile);
+        // Sort by lastActive — most recent first
+        farmers.sort((a, b) =>
+          new Date(b.lastActive || 0).getTime() -
+          new Date(a.lastActive || 0).getTime()
         );
-
-        farmers.sort(
-          (a, b) =>
-            new Date(b.lastActive || 0).getTime() -
-            new Date(a.lastActive || 0).getTime()
-        );
-
         callback(farmers);
       },
-      (error) => {
-        console.error("Farmer listener error:", error);
+      (err) => {
+        console.error("Firestore listener error:", err);
         callback([]);
       }
     );
-  } catch (error) {
-    console.error("Farmer listener setup error:", error);
+
+    return unsubscribe;
+  } catch (err) {
+    console.error("Firestore init error:", err);
     callback([]);
     return () => {};
   }
 }
-
 export function listenToAnalyses(
-  organizationId: string,
   callback: (analyses: AnalysisRecord[]) => void
 ): () => void {
-  if (!organizationId.trim()) {
-    callback([]);
-    return () => {};
-  }
-
   try {
-    const q = query(
-      collection(getDb(), "farmers"),
-      where("organizationId", "==", organizationId)
-    );
+    const db = getDb();
+    const q = query(collection(db, "farmers"));
 
-    return onSnapshot(
+    const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         const allAnalyses: AnalysisRecord[] = [];
-
-        snapshot.docs.forEach((document) => {
-          const farmer = document.data() as FarmerProfile;
-
-          (farmer.diseases || []).forEach((disease, index) => {
-            const dateTime = disease.timestamp
-              ? new Date(disease.timestamp)
-              : new Date();
-
+        snapshot.docs.forEach((doc) => {
+          const farmer = doc.data() as FarmerProfile;
+          (farmer.diseases || []).forEach((d, i) => {
+            const dt = d.timestamp ? new Date(d.timestamp) : new Date();
             allAnalyses.push({
-              id: `${farmer.farmerId}-${index}`,
-              title: `${disease.cropType || "Unknown crop"} diagnosis`,
-              date: dateTime.toISOString().split("T")[0],
-              time: dateTime.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              }),
-              cropType: disease.cropType || "Unknown",
-              healthScore: disease.healthScore ?? 0,
-              riskLevel: (
-                disease.severity === "Severe" ||
-                disease.severity === "High"
-                  ? "High"
-                  : disease.severity === "Moderate" ||
-                      disease.severity === "Medium"
-                    ? "Medium"
-                    : "Low"
-              ) as "Low" | "Medium" | "High",
-              diagnose: disease.diagnosis || "Unknown",
+              id: `${farmer.farmerId}-${i}`,
+              title: `${d.cropType || "Unknown crop"} diagnosis`,
+              date: dt.toISOString().split("T")[0],
+              time: dt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+              cropType: d.cropType || "Unknown",
+              healthScore: d.healthScore ?? 0,
+              riskLevel: (d.severity === "Severe" || d.severity === "High" ? "High"
+                : d.severity === "Moderate" || d.severity === "Medium" ? "Medium"
+                : "Low") as "Low" | "Medium" | "High",
+              diagnose: d.diagnosis || "Unknown",
               recommendations: [],
-              confidence: disease.confidence ?? 0,
-              status: "Completed",
+              confidence: d.confidence ?? 0,
+              status: "Completed" as const,
             });
           });
         });
-
-        allAnalyses.sort(
-          (a, b) =>
-            new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-
+        allAnalyses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         callback(allAnalyses);
       },
-      (error) => {
-        console.error("Analysis listener error:", error);
+      (err) => {
+        console.error("Analyses listener error:", err);
         callback([]);
       }
     );
-  } catch (error) {
-    console.error("Analysis listener setup error:", error);
+
+    return unsubscribe;
+  } catch (err) {
+    console.error("Firestore init error:", err);
     callback([]);
     return () => {};
   }
