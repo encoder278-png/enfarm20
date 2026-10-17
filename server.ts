@@ -200,7 +200,7 @@ Endelea kutumia EnFarm kupata msaada zaidi wa shamba lako!`;
 async function startServer() {
   const app = express();
   app.set("trust proxy", 1);
-  const PORT = 3000;
+  const PORT = Number(process.env.PORT) || 3000;
 
   // Increase payload limit for base64 image uploads
   app.use(express.json({ limit: "20mb" }));
