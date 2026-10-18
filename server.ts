@@ -338,69 +338,16 @@ res.json({
       const rawBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
       const resolvedMime = mimeType || "image/jpeg";
 
+  
+     
       let client: GoogleGenAI;
       try {
         client = getGeminiClient();
       } catch (err: any) {
         if (err.message === "API_KEY_MISSING") {
-          // Generate realistic crop diagnosis fallback
-          const sampleDiagnoses = [
-  {
-    crop: "Mahindi (Zea mays)",
-    healthScore: 45,
-    riskLevel: "High",
-    diagnosis: "Fall Armyworm - Viwavi vya Jeshi",
-    severity: "Severe",
-    confidence: 0.88,
-    recommendations: [
-      "Nyunyizia dawa ya Lambda-cyhalothrin asubuhi na mapema kabla jua halijachomoza.",
-      "Angalia mimea yako kila siku asubuhi kwa mayai ya viwavi chini ya majani.",
-      "Kata na choma majani yaliyoathirika ili kuzuia kuenea.",
-      "Panda aina ya mahindi inayostahimili wadudu msimu ujao."
-    ],
-    summary: "Mahindi yako yana shambulio kubwa la viwavi vya jeshi. Chukua hatua haraka leo."
-  },
-  {
-    crop: "Muhogo (Manihot esculenta)",
-    healthScore: 38,
-    riskLevel: "High",
-    diagnosis: "Cassava Mosaic Disease - Ugonjwa wa Mosaic wa Muhogo",
-    severity: "Severe",
-    confidence: 0.91,
-    recommendations: [
-      "Ng'oa mimea yote iliyoathirika na uichome mbali na shamba.",
-      "Usitumie vipande vya muhogo mgonjwa kupanda.",
-      "Panda aina ya muhogo inayostahimili ugonjwa kama UKIRIGURU.",
-      "Angalia wadudu weupe wadogo kwenye majani — wao husambaza ugonjwa huu."
-    ],
-    summary: "Muhogo wako una ugonjwa mbaya wa mosaic. Lazima ung'oe mimea iliyoathirika haraka."
-  },
-  {
-    crop: "Mahindi (Zea mays)",
-    healthScore: 85,
-    riskLevel: "Low",
-    diagnosis: "Afya Nzuri - Upungufu Mdogo wa Nitrojeni",
-    severity: "None",
-    confidence: 0.93,
-    recommendations: [
-      "Weka mbolea ya urea kidogo — kilo 40 kwa ekari moja kabla mahindi hayajachanua.",
-      "Endelea kumwagilia mara mbili kwa wiki.",
-      "Shamba lako liko vizuri. Endelea kulilinda."
-    ],
-    summary: "Mahindi yako yana afya nzuri. Ongeza mbolea kidogo ili mavuno yawe bora zaidi."
-  }
-];
-
-          // Pick crop based on prompt if specified, otherwise random
-          let picked = sampleDiagnoses[Math.floor(Math.random() * sampleDiagnoses.length)];
-          if (cropTypePrompt) {
-            const match = sampleDiagnoses.find(d => d.crop.toLowerCase().includes(cropTypePrompt.toLowerCase()));
-            if (match) picked = match;
-          }
-
-          return res.json({
-            ...picked,
-            summary: `[DEMO MODE] ${picked.summary}`
+          return res.status(503).json({
+            error: "Image analysis is temporarily unavailable. Please try again later.",
+            code: "IMAGE_AI_UNAVAILABLE"
           });
         }
         throw err;
