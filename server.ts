@@ -488,7 +488,7 @@ const imageResp = await fetch(imageUrl, {
 
         const client = getGeminiClient();
         const response = await client.models.generateContent({
-          model: "gemini-2.0-flash",
+          model: "gemini-3.8-flash",
           contents: [
             { inlineData: { data: base64Image, mimeType } },
             {
