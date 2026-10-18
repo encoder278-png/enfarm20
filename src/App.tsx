@@ -272,31 +272,16 @@ useEffect(() => {
       } else {
         throw new Error();
       }
-    } catch {
-      // Mock result fallback if everything breaks
-      const num = analyses.length + 1;
-      const fallbackRecord: AnalysisRecord = {
-        id: `analyse-${num}`,
-        title: `Data Analyse ${num}`,
-        cropType: cropType !== "Auto-Detect" ? cropType : "Mahindi (Zea mays)",
-        date: new Date().toISOString().split("T")[0],
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        healthScore: 75,
-        riskLevel: "Medium",
-        diagnose: "Mahindi yako yanaonyesha dalili za upungufu wa nitrojeni. Majani yanaonekana ya njano kidogo kwenye ncha. Weka mbolea ya urea haraka.",
-        recommendations: [
-          "Apply trace nitrogen fertilizer side-dresses.",
-          "Perform NPK leaf core extraction tests next Wednesday.",
-          "Check soil clay absorption indices."
-        ],
-        confidence: 0.82,
-        status: "Completed",
-        imageUrl: base65ToDisplayPreview(base64Image, mimeType)
-      };
 
-      setAnalyses((prev: AnalysisRecord[]) => [fallbackRecord, ...prev]);
-      setSelectedAnalysisId(fallbackRecord.id);
-      setActiveTab(Tab.ANALYSIS_RESULTS);
+} catch (error) {
+  console.error("Crop image analysis failed:", error);
+
+  window.alert(
+    error instanceof Error
+      ? error.message
+      : "EnFarm the service is unavailable. Please try again later."
+  );
+
     } finally {
       setIsAnalyzingImage(false);
     }
