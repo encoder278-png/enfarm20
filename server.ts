@@ -240,16 +240,20 @@ if (farmerId) {
 const memoryContext =
   buildFarmerContext(farmerMemory);
 
+   
       let client: OpenAI;
       try {
         client = getGroqClient();
       } catch (err: any) {
         if (err.message === "API_KEY_MISSING") {
-  return res.status(503).json({
-    error: "Image analysis is temporarily unavailable. Please try again later.",
-    code: "IMAGE_AI_UNAVAILABLE"
-  });
-}
+          return res.status(503).json({
+            error: "CEN AI is temporarily unavailable. Please try again later.",
+            code: "CHAT_AI_UNAVAILABLE"
+          });
+        }
+        throw err;
+      }
+
 
 const systemInstruction = `
 ${memoryContext}
