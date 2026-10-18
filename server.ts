@@ -361,7 +361,7 @@ Use scientific names only in the crop field. Everything else must be in Swahili.
 Provide your response exactly matching the JSON schema structure.`;
 
       const response = await client.models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-3.8-flash",
         contents: [
           {
             inlineData: {
