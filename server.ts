@@ -245,14 +245,11 @@ const memoryContext =
         client = getGroqClient();
       } catch (err: any) {
         if (err.message === "API_KEY_MISSING") {
-          // Simulated Agriculture Expert responses as graceful fallback
-          return res.json({
-            text: "Live AI is temporarily unavailable. Please try again later.",
-            groundingSources: []
-          });
-        }
-        throw err;
-      }
+  return res.status(503).json({
+    error: "Image analysis is temporarily unavailable. Please try again later.",
+    code: "IMAGE_AI_UNAVAILABLE"
+  });
+}
 
 const systemInstruction = `
 ${memoryContext}
