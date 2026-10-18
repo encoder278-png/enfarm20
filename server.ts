@@ -353,12 +353,42 @@ res.json({
         throw err;
       }
 
-      const prompt = `You are CEN, the EnFarm crop disease specialist for Tanzania. Analyze this crop image.
+     
+const prompt = `You are CEN, the EnFarm crop disease specialist for Tanzania.
+
+STEP 1: VALIDATE THE IMAGE BEFORE DIAGNOSIS.
+First determine whether the image clearly contains a real plant or crop.
+Do not assume the image contains a plant just because the user uploaded it
+to a crop-analysis feature.
+
+If the image clearly contains NO plant or crop, do not diagnose anything.
+Return the required JSON schema with:
+- isPlant: false
+- cropName: "Unknown"
+- diagnosis: "Hakuna mmea uliotambuliwa kwenye picha."
+- healthScore: null
+- confidence: 0
+- riskLevel: "Unknown"
+- recommendations: []
+
+If the image is blurry, unclear, or you cannot confidently determine
+whether a plant is present, return isPlant: null and request a clearer
+photo. Do not invent a diagnosis.
+
+STEP 2: ANALYZE ONLY VALID PLANT IMAGES.
+If a plant is clearly visible, identify the crop and assess only symptoms
+that can actually be seen. Distinguish visible symptoms from possible
+causes. Never invent diseases, pests, nutrient deficiencies, or symptoms.
+If the evidence is insufficient, state that the cause cannot be confirmed.
+
 Focus on crops common in Tanzania: maize, cassava, rice, sunflower, beans.
-Identify the crop, diagnose any disease, pest damage, or nutrient deficiency.
-All text fields in your response must be written in simple Swahili that an uneducated farmer can understand.
-Use scientific names only in the crop field. Everything else must be in Swahili.
-Provide your response exactly matching the JSON schema structure.`;
+
+All farmer-facing text must be written in simple Swahili.
+Use scientific names only in the crop field. Everything else must be
+in Swahili.
+
+Return valid JSON matching the existing response schema exactly.
+Do not include Markdown or explanatory text outside the JSON.`;
 
       const response = await client.models.generateContent({
         model: "gemini-3.8-flash",
