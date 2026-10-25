@@ -54,3 +54,32 @@
 .glow-blue {
   box-shadow: 0 0 40px -5px rgba(59, 130, 246, 0.15);
 }
+
+/* EnFarm light navigation */
+.enfarm-sidebar {
+  background: #ffffff;
+  border-color: #e1e6df;
+}
+
+.enfarm-nav-item {
+  color: #58685e;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.enfarm-nav-item:hover {
+  background: #f3f6f1;
+  color: #183d32;
+}
+
+.enfarm-nav-item.is-active {
+  background: #dde fe4;
+  background: #ddefe4;
+  color: #183d32;
+  font-weight: 600;
+}
+
+.enfarm-nav-item:focus-visible {
+  outline: 2px solid #477c62;
+  outline-offset: 2px;
+}
+
