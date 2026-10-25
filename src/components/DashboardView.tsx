@@ -201,7 +201,44 @@ export default function DashboardView({
     <div className="h-full overflow-y-auto bg-[#F4F5F0] p-4 sm:p-6 lg:p-8">
       <div className="mx-auto max-w-7xl space-y-6">
         {/* Page heading */}
-        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        
+<header className="relative isolate overflow-hidden rounded-2xl bg-[#183D32]">
+  <img
+    src="african-farmers.jpg"
+    alt=""
+    aria-hidden="true"
+    className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+  />
+
+  <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#102E25]/95 via-[#183D32]/75 to-[#183D32]/20" />
+
+  <div className="flex min-h-[260px] flex-col justify-between gap-6 p-6 sm:flex-row sm:items-end sm:p-9">
+    <div className="max-w-2xl">
+      <p className="text-sm font-semibold tracking-[0.18em] text-[#DDEFE4]">
+        ENFARM · SMART AGRICULTURE
+      </p>
+
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
+        Better farming starts with better information.
+      </h1>
+
+      <p className="mt-3 max-w-xl text-sm leading-6 text-white/85 sm:text-base">
+        Monitor recorded crop analyses, review alerts, and connect with
+        farmers through one agricultural support platform.
+      </p>
+    </div>
+
+    <button
+      type="button"
+      onClick={() => setActiveTab('UPLOAD_ANALYSIS' as Tab)}
+      className="inline-flex w-fit shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[#183D32] transition-colors hover:bg-[#DDEFE4]"
+    >
+      <Camera className="h-4 w-4" />
+      Analyse a crop
+    </button>
+  </div>
+</header>
+
           <div>
             <p className="text-sm font-medium text-[#557C62]">
               ENFARM CONTROL CENTRE
