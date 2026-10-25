@@ -204,7 +204,7 @@ export default function DashboardView({
         
 <header className="relative isolate overflow-hidden rounded-2xl bg-[#183D32]">
   <img
-    src="images/african-farmers.jpg"
+    src="african-farmers.jpg"
     alt=""
     aria-hidden="true"
     className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
