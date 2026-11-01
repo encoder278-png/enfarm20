@@ -1,5 +1,6 @@
 
 import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import {
   Users,
   MapPin,
@@ -23,7 +24,7 @@ import type {
   Alert,
   FarmerProfile,
   Tab,
-} from './types';
+ } from '../types';
 
 interface DashboardViewProps {
   farmers: FarmerProfile[];
@@ -43,7 +44,7 @@ function Card({
   children,
   className = '',
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }) {
   return (
@@ -239,22 +240,6 @@ export default function DashboardView({
   </div>
 </header>
 
-          <div>
-            <p className="text-sm font-medium text-[#557C62]">
-              ENFARM CONTROL CENTRE
-            </p>
-            <h1 className="mt-1 text-3xl font-semibold tracking-tight text-[#183D32]">
-              Home
-            </h1>
-            <p className="mt-2 text-sm text-[#718076]">
-              Monitor recorded activity and access your farm support tools.
-            </p>
-          </div>
-
-          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#DCE4DA] bg-white px-3 py-2 text-sm text-[#52665A]">
-            <Activity className="h-4 w-4 text-[#557C62]" />
-            Live data status not verified
-          </div>
         </header>
 
         {/* Summary metrics */}
