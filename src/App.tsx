@@ -3,7 +3,7 @@ import { Tab, ChatMessage, AnalysisRecord, Alert, WeatherData, MarketCropPrice, 
 import Sidebar from "./components/Sidebar";
 import DashboardView from "./components/DashboardView";
 import AiAssistantView from "./components/AiAssistantView";
-import UploadAnalysisView from "./components/UploadAnalysisView";
+import RoverMonitoringView from "./components/RoverMonitoringView";
 import AnalysisResultsView from "./components/AnalysisResultsView";
 import WeatherIntelligenceView from "./components/WeatherIntelligenceView";
 import MarketIntelligenceView from "./components/MarketIntelligenceView";
