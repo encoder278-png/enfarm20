@@ -512,6 +512,13 @@ const authString = Buffer.from(
 const imageResp = await fetch(imageUrl, {
   headers: { Authorization: `Basic ${authString}` },
 });
+        if (!imageResp.ok) {
+  throw new Error(`Twilio image download failed: ${imageResp.status}`);
+}
+
+if (!imageResp.headers.get("content-type")?.startsWith("image/")) {
+  throw new Error("The received media is not an image.");
+}
         const imageBuffer = await imageResp.arrayBuffer();
         const base64Image  = Buffer.from(imageBuffer).toString("base64");
         const mimeType     = imageResp.headers.get("content-type") || "image/jpeg";
