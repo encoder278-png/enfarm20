@@ -571,16 +571,20 @@ Provide your response exactly matching the JSON schema structure.`,
           farmerId,
           joinedAt: farmer?.joinedAt ?? new Date().toISOString(),
 
+
 diseases: [
   ...(farmer?.diseases || []),
-  ...(textDiagnosis ? [
+  ...(diagnosisRecord ? [
     {
-      source: "whatsapp_conversation",
-      cropType: textDiagnosis.cropType ?? null,
-      diagnosis: textDiagnosis.diagnosis ?? null,
-      severity: textDiagnosis.severity ?? null,
-      healthScore: null,
-      confidence: textDiagnosis.confidence ?? null,
+      source: "whatsapp_image",
+      cropType: diagnosisRecord.crop ?? null,
+      diagnosis: diagnosisRecord.diagnosis ?? null,
+      severity: diagnosisRecord.severity ?? null,
+      healthScore: diagnosisRecord.healthScore ?? null,
+      confidence: diagnosisRecord.confidence ?? null,
+      treatment: diagnosisRecord.recommendations || [],
+      outcome: null,
+      recoveryDays: null,
       timestamp: new Date().toISOString(),
     }
   ] : []),
