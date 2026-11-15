@@ -163,23 +163,64 @@ Mazungumzo ya hivi karibuni:
 ${recentChats || "Hakuna"}
 `;
 }
+
 function buildFarmerReport(farmer: any): string {
   if (!farmer || !(farmer.conversations?.length || farmer.diseases?.length)) {
     return "Bado hujaanza kutumia EnFarm. Tuma swali lako la kwanza la kilimo ili nianze kukusaidia!";
   }
 
   const joinedDate = farmer.joinedAt
-    ? new Date(farmer.joinedAt).toLocaleDateString("sw-TZ", { day: "numeric", month: "long", year: "numeric" })
+    ? new Date(farmer.joinedAt).toLocaleDateString("sw-TZ", {
+        day: "numeric",
+        month: "long",
+        year: "numeric"
+      })
     : "Haijulikani";
 
-  const totalQuestions = (farmer.conversations || []).filter((c: any) => c.role === "farmer").length;
-  const totalDiagnoses = (farmer.diseases || []).length;
+  const conversations = farmer.conversations || [];
+  const assessments = farmer.diseases || [];
 
-  const diseaseList = (farmer.diseases || [])
+  const totalQuestions = conversations.filter(
+    (c: any) => c.role === "farmer"
+  ).length;
+
+  const imageAssessments = assessments.filter(
+    (d: any) => d.source === "whatsapp_image"
+  ).length;
+
+  const conversationAssessments = assessments.filter(
+    (d: any) =>
+      d.source === "whatsapp_conversation" ||
+      d.source === "web_conversation"
+  ).length;
+
+  const legacyAssessments = assessments.filter(
+    (d: any) => !d.source
+  ).length;
+
+  const totalDiagnoses = assessments.length;
+
+  const assessmentList = assessments
     .slice(-5)
+    .reverse()
     .map((d: any, i: number) => {
-      const date = d.timestamp ? new Date(d.timestamp).toLocaleDateString("sw-TZ", { day: "numeric", month: "short" }) : "?";
-      return `${i + 1}. ${d.cropType || "Zao lisilojulikana"}: ${d.diagnosis || "?"} (${date})`;
+      const date = d.timestamp
+        ? new Date(d.timestamp).toLocaleDateString("sw-TZ", {
+            day: "numeric",
+            month: "short"
+          })
+        : "Tarehe haijulikani";
+
+      const source =
+        d.source === "whatsapp_image"
+          ? "Picha"
+          : d.source === "whatsapp_conversation"
+          ? "Mazungumzo ya WhatsApp"
+          : d.source === "web_conversation"
+          ? "Mazungumzo ya mtandao"
+          : "Rekodi ya zamani";
+
+      return `${i + 1}. ${d.cropType || "Zao lisilojulikana"}: ${d.diagnosis || "Tathmini haijakamilika"} (${source}, ${date})`;
     })
     .join("\n");
 
@@ -189,13 +230,22 @@ Jina: ${farmer.name || "Haijulikani"}
 Mkoa: ${farmer.region || "Haijulikani"}
 Umetumia EnFarm tangu: ${joinedDate}
 
+*MATUMIZI YA ENFARM*
 Maswali uliyouliza: ${totalQuestions}
-Uchunguzi wa picha: ${totalDiagnoses}
 
-${totalDiagnoses > 0 ? `*Magonjwa/matatizo ya hivi karibuni:*\n${diseaseList}` : "Bado hujatuma picha yoyote ya uchunguzi."}
+*TAHMINI ZA MAZAO*
+Jumla ya tathmini: ${totalDiagnoses}
+Uchunguzi kupitia picha: ${imageAssessments}
+Tathmini kupitia mazungumzo: ${conversationAssessments}
+Rekodi za zamani zisizo na chanzo: ${legacyAssessments}
+
+${totalDiagnoses > 0
+  ? `*TATHMINI ZA HIVI KARIBUNI:*\n${assessmentList}`
+  : "Bado hakuna tathmini za mazao zilizohifadhiwa."}
 
 Endelea kutumia EnFarm kupata msaada zaidi wa shamba lako!`;
 }
+
 
 async function startServer() {
   const app = express();
