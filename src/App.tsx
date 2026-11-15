@@ -268,6 +268,18 @@ export default function App() {
                 setActiveTab={setActiveTab}
               />
             )}
+            
+{activeTab === Tab.REPORTS && (
+  <ReportsView
+    analyses={analyses}
+    farmers={farmers}
+    onSelectAnalysis={(record) => {
+      setSelectedAnalysisId(record.id);
+      setActiveTab(Tab.ANALYSIS_RESULTS);
+    }}
+  />
+)}
+
 
             {activeTab === Tab.WEATHER_INTELLIGENCE && (
               <div className="h-full flex items-center justify-center p-6">
