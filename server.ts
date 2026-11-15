@@ -780,6 +780,7 @@ Ukilazimika kuchagua kati ya kuonekana mwerevu au kukiri kutokuwa na uhakika - c
   region: farmer?.region ?? null,
   profileAskedAt: (shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt) ?? null,
  
+
 diseases: [
   ...(farmer?.diseases || []),
   ...(diagnosisRecord ? [
