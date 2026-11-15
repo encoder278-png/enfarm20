@@ -682,8 +682,11 @@ diseases: [
           ],
           lastActive: new Date().toISOString(),
         };
-        try { await saveFarmer(farmerId, updated); } catch {}
-
+      try {
+  await saveFarmer(farmerId, updated);
+} catch (err) {
+  console.error("WhatsApp image assessment save failed:", err);
+}
       } else if (incomingMsg) {
         // Reply instantly so Twilio doesn't time out — real answer follows as a separate message
         twiml.message("Ninachunguza swali lako, nitajibu kwa muda mfupi...");
