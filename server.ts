@@ -782,17 +782,25 @@ Ukilazimika kuchagua kati ya kuonekana mwerevu au kukiri kutokuwa na uhakika - c
   name: farmer?.name ?? null,
   region: farmer?.region ?? null,
   profileAskedAt: (shouldAskNow ? new Date().toISOString() : farmer?.profileAskedAt) ?? null,
-  diseases: [
-    ...((farmer?.diseases || [])),
-    ...(textDiagnosis ? [{
-      cropType: textDiagnosis.cropType ?? null,
-      diagnosis: textDiagnosis.diagnosis ?? null,
-      severity: textDiagnosis.severity ?? null,
-      healthScore: null,
-      confidence: textDiagnosis.confidence ?? null,
+ 
+diseases: [
+  ...(farmer?.diseases || []),
+  ...(diagnosisRecord ? [
+    {
+      source: "whatsapp_image",
+      cropType: diagnosisRecord.crop ?? null,
+      diagnosis: diagnosisRecord.diagnosis ?? null,
+      severity: diagnosisRecord.severity ?? null,
+      healthScore: diagnosisRecord.healthScore ?? null,
+      confidence: diagnosisRecord.confidence ?? null,
+      treatment: diagnosisRecord.recommendations || [],
+      outcome: null,
+      recoveryDays: null,
       timestamp: new Date().toISOString(),
-    }] : []),
-  ],
+    }
+  ] : []),
+],
+
       conversations: [
     ...((farmer?.conversations || []).slice(-9)),
     { role: "farmer", text: incomingMsg, timestamp: new Date().toISOString() },
