@@ -570,25 +570,22 @@ Provide your response exactly matching the JSON schema structure.`,
           ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
           farmerId,
           joinedAt: farmer?.joinedAt ?? new Date().toISOString(),
-          diseases: [
-            ...((farmer?.diseases || [])),
-            ...(diagnosisRecord ? [
-              {
-  cropType: diagnosisRecord.crop ?? null,
-  diagnosis: diagnosisRecord.diagnosis ?? null,
-  severity: diagnosisRecord.severity ?? null,
-  healthScore: diagnosisRecord.healthScore ?? null,
-  confidence: diagnosisRecord.confidence ?? null,
 
-  treatment: diagnosisRecord.recommendations || [],
+diseases: [
+  ...(farmer?.diseases || []),
+  ...(textDiagnosis ? [
+    {
+      source: "whatsapp_conversation",
+      cropType: textDiagnosis.cropType ?? null,
+      diagnosis: textDiagnosis.diagnosis ?? null,
+      severity: textDiagnosis.severity ?? null,
+      healthScore: null,
+      confidence: textDiagnosis.confidence ?? null,
+      timestamp: new Date().toISOString(),
+    }
+  ] : []),
+],
 
-  outcome: null,
-
-  recoveryDays: null,
-
-  timestamp: new Date().toISOString(),
-}] : []),
-          ],
           conversations: [
             ...((farmer?.conversations || []).slice(-9)),
             { role: "farmer", text: "[Alituma picha ya zao]", timestamp: new Date().toISOString() },
