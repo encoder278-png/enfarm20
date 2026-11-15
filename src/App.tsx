@@ -19,6 +19,7 @@ import WeatherIntelligenceView from "./components/WeatherIntelligenceView";
 import MarketIntelligenceView from "./components/MarketIntelligenceView";
 import RecommendationsView from "./components/RecommendationsView";
 import AlertsCenterView from "./components/AlertsCenterView";
+import ReportsView from "./components/ReportsView";
 import HistoryView from "./components/HistoryView";
 import SettingsView from "./components/SettingsView";
 import FarmersView from "./components/FarmersView";
