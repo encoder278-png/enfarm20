@@ -1,3 +1,4 @@
+
 export enum Tab {
   DASHBOARD = 'DASHBOARD',
   AI_ASSISTANT = 'AI_ASSISTANT',
@@ -9,8 +10,8 @@ export enum Tab {
   ALERTS_CENTER = 'ALERTS_CENTER',
   HISTORY = 'HISTORY',
   SETTINGS = 'SETTINGS',
-FARMERS = 'FARMERS',
-WHATSAPP_CHAT = 'WHATSAPP_CHAT'
+  FARMERS = 'FARMERS',
+  WHATSAPP_CHAT = 'WHATSAPP_CHAT'
 }
 
 export interface ChatMessage {
@@ -22,7 +23,6 @@ export interface ChatMessage {
 }
 
 export interface AnalysisRecord {
-  export interface AnalysisRecord {
   id: string;
   farmerId?: string;
   source?: string;
@@ -57,7 +57,12 @@ export interface WeatherData {
   windSpeed: number;
   precipitation: number;
   uvIndex: number;
-  weeklyForecast: { day: string; temp: number; humidity: number; condition: string }[];
+  weeklyForecast: {
+    day: string;
+    temp: number;
+    humidity: number;
+    condition: string;
+  }[];
 }
 
 export interface MarketCropPrice {
@@ -68,7 +73,10 @@ export interface MarketCropPrice {
   unit: string;
   changePercent: number;
   trend: 'up' | 'down' | 'stable';
-  history: { date: string; value: number }[];
+  history: {
+    date: string;
+    value: number;
+  }[];
   marketCap: string;
   volume24h: string;
 }
@@ -84,8 +92,8 @@ export interface FarmSettings {
   autoAlertsEnabled: boolean;
   apiGroundingEnabled: boolean;
 }
+
 export interface FarmerProfile {
- export interface FarmerProfile {
   farmerId: string;
   organizationId?: string;
   name?: string;
