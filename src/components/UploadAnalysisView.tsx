@@ -1,288 +1,484 @@
-import React, { useState, useRef } from "react";
-import { UploadCloud, CheckCircle, AlertTriangle, Cpu, HelpCircle, FileImage } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+
+import React, { useRef, useState } from "react";
+import {
+  UploadCloud,
+  Camera,
+  ImagePlus,
+  CheckCircle,
+  AlertTriangle,
+  Cpu,
+  Leaf,
+  X,
+  Radio,
+  Clock3,
+} from "lucide-react";
+import { motion } from "motion/react";
 
 interface UploadAnalysisViewProps {
-  onAnalyzeImage: (base64Image: string, mimeType: string, cropType: string) => Promise<void>;
+  onAnalyzeImage: (
+    base64Image: string,
+    mimeType: string,
+    cropType: string
+  ) => Promise<void>;
   isAnalyzing: boolean;
 }
 
-export default function UploadAnalysisView({ onAnalyzeImage, isAnalyzing }: UploadAnalysisViewProps) {
-  const [dragActive, setDragActive] = useState(false);
+const cropOptions = [
+  "Auto-Detect",
+  "Mahindi",
+  "Muhogo",
+  "Mpunga",
+  "Alizeti",
+  "Maharage",
+];
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+const SUPPORTED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+];
+
+export default function UploadAnalysisView({
+  onAnalyzeImage,
+  isAnalyzing,
+}: UploadAnalysisViewProps) {
   const [selectedCrop, setSelectedCrop] = useState("Auto-Detect");
-  const [uploadedFile, setUploadedFile] = useState<{ name: string; size: string; preview: string } | null>(null);
-  const [base64String, setBase64String] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadedFile, setUploadedFile] = useState<{
+    name: string;
+    size: string;
+    preview: string;
+    mimeType: string;
+  } | null>(null);
 
-  // High-fidelity vector representations of diseased leaves as pre-provided samples
-  // This allows immediate testing of the AI Pathology Engine!
-  const sampleLeaves = [
-    {
-      id: "armyworm-mahindi",
-      label: "Fall Armyworm on Maize",
-      crop: "Mahindi",
-      description: "Chewed leaf edges and holes from caterpillar feeding",
-      // Illustrative placeholder — not a real photo
-      dataUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'><rect width='100' height='100' fill='%231e293b'/><ellipse cx='50' cy='50' rx='25' ry='40' fill='%2322c55e' transform='rotate(15 50 50)'/><path d='M30 40 Q40 50 50 42 T70 38' stroke='%23f97316' stroke-width='4' fill='none'/><circle cx='42' cy='35' r='3' fill='%23ea580c'/><circle cx='54' cy='48' r='2' fill='%23ea580c'/><circle cx='48' cy='58' r='3' fill='%23ea580c'/><circle cx='58' cy='32' r='2' fill='%23b45309'/><circle cx='38' cy='52' r='4' fill='%23b45309'/></svg>"
-    },
-    {
-      id: "mosaic-muhogo",
-      label: "Cassava Mosaic Disease",
-      crop: "Muhogo",
-      description: "Yellow-green mottled pattern on leaves",
-      dataUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'><rect width='100' height='100' fill='%231e293b'/><path d='M50 15 C20 45 35 85 50 85 C65 85 80 45 50 15 Z' fill='%234ade80'/><circle cx='42' cy='45' r='8' fill='%2378350f' opacity='0.75'/><circle cx='42' cy='45' r='4' fill='%23451a03'/><circle cx='58' cy='62' r='10' fill='%2378350f' opacity='0.75'/><circle cx='58' cy='62' r='5' fill='%23451a03'/><line x1='50' y1='15' x2='50' y2='85' stroke='%2315803d' stroke-width='2'/></svg>"
-    },
-    {
-      id: "healthy-mahindi",
-      label: "Healthy Maize Leaf",
-      crop: "Mahindi",
-      description: "Even green color, no visible damage",
-      dataUrl: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'><rect width='100' height='100' fill='%231e293b'/><ellipse cx='50' cy='50' rx='18' ry='42' fill='%2310b981' transform='rotate(-10 50 50)'/><line x1='50' y1='10' x2='42' y2='90' stroke='%23047857' stroke-width='2.5'/><ellipse cx='42' cy='45' rx='6' ry='12' fill='%2334d399' transform='rotate(30 42 45)'/></svg>"
-    }
-  ];
+  const [error, setError] = useState("");
 
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
+  const [dragActive, setDragActive] = useState(false);
 
-  const processFile = (file: File) => {
-    if (!file || !file.type.startsWith("image/")) {
-      alert("Please upload a valid leaf image file (PNG or JPEG).");
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  const processFile = (file?: File) => {
+    if (!file) return;
+
+    setError("");
+
+    if (!SUPPORTED_TYPES.includes(file.type)) {
+      setError("Please select a JPEG, PNG or WebP image.");
       return;
     }
 
-    const sizeStr = (file.size / (1024 * 1024)).toFixed(2) + " MB";
+    if (file.size > MAX_FILE_SIZE) {
+      setError("Image must be smaller than 10 MB.");
+      return;
+    }
+
     const reader = new FileReader();
-    reader.onloadend = () => {
-      const b64 = reader.result as string;
+
+    reader.onload = () => {
+      if (typeof reader.result !== "string") {
+        setError("Unable to read this image. Please try another file.");
+        return;
+      }
+
       setUploadedFile({
         name: file.name,
-        size: sizeStr,
-        preview: b64
+        size: (file.size / (1024 * 1024)).toFixed(2) + " MB",
+        preview: reader.result,
+        mimeType: file.type,
       });
-      setBase64String(b64);
     };
+
+    reader.onerror = () => {
+      setError("There was a problem reading the image.");
+    };
+
     reader.readAsDataURL(file);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    processFile(event.target.files?.[0]);
+
+    // Allows selecting the same image again.
+    event.target.value = "";
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
     setDragActive(false);
 
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processFile(e.dataTransfer.files[0]);
+    if (!isAnalyzing) {
+      processFile(event.dataTransfer.files?.[0]);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    if (e.target.files && e.target.files[0]) {
-      processFile(e.target.files[0]);
+  const handleAnalyze = async () => {
+    if (!uploadedFile || isAnalyzing) return;
+
+    setError("");
+
+    try {
+      await onAnalyzeImage(
+        uploadedFile.preview,
+        uploadedFile.mimeType,
+        selectedCrop
+      );
+    } catch {
+      setError("Image analysis failed. Please try again.");
     }
   };
 
-  const chooseSample = (sample: typeof sampleLeaves[0]) => {
-    setUploadedFile({
-      name: `${sample.label}.svg`,
-      size: "Vector Path",
-      preview: sample.dataUrl
-    });
-    setBase64String(sample.dataUrl);
-    setSelectedCrop(sample.crop);
-  };
+  const clearImage = () => {
+    if (isAnalyzing) return;
 
-  const handleUploadSubmit = () => {
-    if (!base64String) return;
-    const isSvg = uploadedFile?.name.endsWith(".svg");
-    const mime = isSvg ? "image/svg+xml" : "image/jpeg";
-    onAnalyzeImage(base64String, mime, selectedCrop);
+    setUploadedFile(null);
+    setError("");
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.3 }}
-      className="p-6 h-full overflow-y-auto pr-4 space-y-6"
+      transition={{ duration: 0.25 }}
+      className="h-full overflow-y-auto bg-[#F4F5F0] p-4 sm:p-6 lg:p-8"
     >
-      <div>
-       <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-  <UploadCloud className="text-emerald-400 w-7 h-7" /> Upload & Analyze
-</h1>
-<p className="text-sm text-slate-400 mt-1">
-  Upload a crop photo to detect diseases, pests, or nutrient deficiencies using AI.
-</p>
-      </div>
+      <div className="mx-auto max-w-7xl space-y-6">
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Control Panel (7 cols) */}
-        <div className="lg:col-span-7 space-y-6">
-          
-          {/* File Picker Zone */}
-          <div
-            onDragEnter={handleDrag}
-            onDragOver={handleDrag}
-            onDragLeave={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`cursor-pointer border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-all ${
-              dragActive 
-                ? "border-emerald-500 bg-emerald-500/5" 
-                : uploadedFile 
-                  ? "border-emerald-600/50 bg-[#151c28]/40" 
-                  : "border-slate-800 hover:border-emerald-500/40 bg-[#151c28]/60"
-            }`}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={handleChange}
-              disabled={isAnalyzing}
-            />
+        {/* Page heading */}
+        <header>
+          <p className="text-xs font-semibold tracking-[0.16em] text-[#557C62]">
+            CROP MONITORING
+          </p>
 
-            {uploadedFile ? (
-              <div className="space-y-4 w-full">
-                {/* Visual Leaf circular display */}
-                <div className="w-28 h-28 rounded-2xl border border-slate-700 mx-auto overflow-hidden bg-slate-950 relative group">
-                  <img
-                    src={uploadedFile.preview}
-                    alt="Uploaded Leaf foliage"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                    referrerPolicy="no-referrer"
-                  />
-                  {isAnalyzing && (
-                    <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center p-2">
-                      <Cpu className="w-5 h-5 text-emerald-400 animate-spin" />
-                      <span className="text-[9px] text-emerald-400 uppercase tracking-widest font-mono mt-1 font-bold">Scanning</span>
-                      <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-emerald-500/80 shadow-[0_0_15px_#10b981] animate-bounce" />
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#183D32] sm:text-3xl">
+            Camera & Crop Analysis
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[#718076]">
+            Photograph a crop using your phone or upload an existing image
+            to request an analysis from CEN AI.
+          </p>
+        </header>
+
+        <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+
+          {/* Image analysis panel */}
+          <section className="space-y-5 xl:col-span-2">
+
+            <div className="rounded-2xl border border-[#E1E7DF] bg-white p-5 shadow-sm sm:p-6">
+
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#EDF4EC] text-[#315C47]">
+                  <Leaf className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="font-semibold text-[#183D32]">
+                    Submit a crop image
+                  </h2>
+                  <p className="mt-1 text-xs text-[#829287]">
+                    Use your phone camera or image gallery
+                  </p>
+                </div>
+              </div>
+
+              {/* Hidden image inputs */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                capture="environment"
+                className="hidden"
+                onChange={handleFileChange}
+                disabled={isAnalyzing}
+              />
+
+              <input
+                ref={galleryInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleFileChange}
+                disabled={isAnalyzing}
+              />
+
+              {/* Image preview */}
+              {uploadedFile ? (
+                <div className="space-y-4">
+
+                  <div className="relative overflow-hidden rounded-xl border border-[#E1E7DF] bg-[#F6F8F3]">
+                    <img
+                      src={uploadedFile.preview}
+                      alt="Selected crop for analysis"
+                      className="max-h-[380px] w-full object-contain"
+                    />
+
+                    {isAnalyzing && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#183D32]/75 text-white">
+                        <Cpu className="h-8 w-8 animate-spin" />
+                        <p className="mt-3 text-sm font-semibold">
+                          CEN AI is analyzing your image
+                        </p>
+                        <p className="mt-1 text-xs text-white/75">
+                          Please wait for the result
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EDF4EC] text-[#477C62]">
+                        <CheckCircle className="h-5 w-5" />
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-[#354B3D]">
+                          {uploadedFile.name}
+                        </p>
+                        <p className="text-xs text-[#829287]">
+                          {uploadedFile.size} · {uploadedFile.mimeType}
+                        </p>
+                      </div>
                     </div>
-                  )}
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-white truncate">{uploadedFile.name}</h3>
-                  <p className="text-xs text-slate-400 font-mono mt-0.5">{uploadedFile.size}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setUploadedFile(null);
-                    setBase64String(null);
-                  }}
-                  className="text-xs font-semibold text-rose-400 hover:text-rose-300 pointer-events-auto cursor-pointer"
-                >
-                  Clear File
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 mx-auto border border-emerald-500/20 shadow-sm">
-                  <UploadCloud className="w-6 h-6" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-200">Drag leaf photo here, or scroll click to browse</p>
-                  <p className="text-xs text-slate-500 mt-1 font-mono">SUPPORTS PNG, JPEG, OR HEIC UP TO 10MB</p>
-                </div>
-              </div>
-            )}
-          </div>
 
-          {/* Select crop type metadata */}
-          <div className="bg-[#151c28] p-5 rounded-2xl border border-slate-800/80 space-y-4">
-            <h3 className="text-sm font-semibold text-slate-200 flex items-center gap-1.5">
-              <HelpCircle className="w-4 h-4 text-emerald-400" /> Specify Crop Variety
-            </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {["Auto-Detect", "Mahindi", "Muhogo", "Mpunga", "Alizeti", "Maharage"].map((crop) => (
-                <button
-                  key={crop}
-                  type="button"
-                  onClick={() => setSelectedCrop(crop)}
-                  disabled={isAnalyzing}
-                  className={`py-2 px-3.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                    selectedCrop === crop
-                      ? "bg-emerald-500 text-slate-950 shadow-md font-bold"
-                      : "bg-[#1d2736]/40 text-slate-350 border border-slate-800 hover:border-slate-700 text-slate-300"
+                    <button
+                      type="button"
+                      onClick={clearImage}
+                      disabled={isAnalyzing}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-[#A34B43] hover:bg-[#FFF3F1] disabled:opacity-50"
+                    >
+                      <X className="h-4 w-4" />
+                      Remove image
+                    </button>
+                  </div>
+
+                </div>
+              ) : (
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setDragActive(true);
+                  }}
+                  onDragLeave={() => setDragActive(false)}
+                  onDrop={handleDrop}
+                  className={`flex min-h-[250px] flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors ${
+                    dragActive
+                      ? "border-[#477C62] bg-[#EDF4EC]"
+                      : "border-[#DCE4DA] bg-[#FAFBF8]"
                   }`}
                 >
-                  {crop}
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EDF4EC] text-[#477C62]">
+                    <ImagePlus className="h-7 w-7" />
+                  </div>
+
+                  <h3 className="mt-4 font-semibold text-[#354B3D]">
+                    Add a crop photograph
+                  </h3>
+
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-[#829287]">
+                    Select a crop image from your device or take a new
+                    photograph using your phone camera.
+                  </p>
+
+                  <p className="mt-3 text-xs text-[#9AA79D]">
+                    JPEG, PNG or WebP · Maximum 10 MB
+                  </p>
+                </div>
+              )}
+
+              {/* Camera and gallery actions */}
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  className="flex items-center justify-center gap-2 rounded-xl bg-[#183D32] px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#285541] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <Camera className="h-5 w-5" />
+                  Take a photo
                 </button>
-              ))}
-            </div>
-            <p className="text-[11px] text-slate-450 text-slate-400 leading-relaxed font-sans mt-2">
-  Auto-Detect lets Gemini identify the crop automatically from the photo.
-</p>
-          </div>
 
-          {/* Submit Action Button */}
-          <button
-            onClick={handleUploadSubmit}
-            disabled={!base64String || isAnalyzing}
-            className="w-full h-12 bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-600 font-display font-bold text-sm text-slate-950 uppercase tracking-widest rounded-xl flex items-center justify-center gap-2.5 shadow-md shadow-emerald-500/5 hover:scale-[1.005] duration-200 cursor-pointer"
-          >
-            {isAnalyzing ? (
-              <>
-                <Cpu className="w-5 h-5 animate-spin" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <Cpu className="w-5 h-5" />
-<span>Analyze Crop Photo</span>
-              </>
-            )}
-          </button>
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  disabled={isAnalyzing}
+                  className="flex items-center justify-center gap-2 rounded-xl border border-[#DCE4DA] bg-white px-4 py-3.5 text-sm font-semibold text-[#315C47] transition-colors hover:bg-[#F6F8F3] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <UploadCloud className="h-5 w-5" />
+                  Choose from gallery
+                </button>
 
-        </div>
+              </div>
 
-        {/* Right Test Samples Panel (5 cols) */}
-        <div className="lg:col-span-5 bg-[#151c28] border border-slate-800 rounded-2xl p-6 space-y-4">
-          <div>
-            <h3 className="text-sm font-semibold text-white">Try a Sample</h3>
-<p className="text-xs text-slate-400 mt-1">
-  These are illustrative placeholder images to demo the analysis flow — try uploading a real crop photo for an actual diagnosis.
-</p>
-          </div>
+              {/* Crop selection */}
+              <div className="mt-6 border-t border-[#E8ECE5] pt-5">
+                <label className="text-sm font-semibold text-[#354B3D]">
+                  Crop type
+                </label>
 
-          <div className="space-y-3">
-            {sampleLeaves.map((sample) => (
-              <div
-                key={sample.id}
-                onClick={() => chooseSample(sample)}
-                className="p-3 bg-[#0d121c] border border-slate-800 hover:border-emerald-500/40 rounded-xl flex items-center gap-3.5 cursor-pointer hover:bg-[#131b2a] transition-all group"
-              >
-                {/* Visual Preview SVG display */}
-                <div 
-                  className="w-12 h-12 rounded-lg shrink-0 border border-slate-800 overflow-hidden"
-                  dangerouslySetInnerHTML={{ __html: sample.dataUrl.replace("data:image/svg+xml;utf8,", "") }}
-                />
-                <div className="min-w-0">
-                  <h4 className="text-xs font-bold text-slate-200 group-hover:text-emerald-400 transition-colors">
-                    {sample.label}
-                  </h4>
-                  <p className="text-[10px] text-slate-400 mt-0.5 truncate">{sample.description}</p>
+                <p className="mt-1 text-xs text-[#829287]">
+                  Select the crop or allow CEN AI to attempt identification.
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {cropOptions.map((crop) => (
+                    <button
+                      key={crop}
+                      type="button"
+                      disabled={isAnalyzing}
+                      onClick={() => setSelectedCrop(crop)}
+                      className={`rounded-xl border px-3.5 py-2.5 text-xs font-semibold transition-colors disabled:opacity-50 ${
+                        selectedCrop === crop
+                          ? "border-[#315C47] bg-[#183D32] text-white"
+                          : "border-[#DCE4DA] bg-white text-[#52665A] hover:bg-[#F0F5EE]"
+                      }`}
+                    >
+                      {crop}
+                    </button>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
 
-          <div className="bg-[#1e2736]/30 border border-slate-800/40 p-4 rounded-xl flex gap-3">
-            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-slate-400 leading-normal">
-              <strong>How it works:</strong> Your photo is analyzed by Google's Gemini AI, which returns a health score, risk level, and treatment recommendations in Swahili.
+              {/* Error message */}
+              {error && (
+                <div className="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                  {error}
+                </div>
+              )}
+
+              {/* Analysis button */}
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={!uploadedFile || isAnalyzing}
+                className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#477C62] px-5 py-4 text-sm font-semibold text-white transition-colors hover:bg-[#315C47] disabled:cursor-not-allowed disabled:bg-[#DCE4DA] disabled:text-[#829287]"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Cpu className="h-5 w-5 animate-spin" />
+                    Analyzing image...
+                  </>
+                ) : (
+                  <>
+                    <Cpu className="h-5 w-5" />
+                    Analyze crop photo
+                  </>
+                )}
+              </button>
+
+              <p className="mt-3 text-center text-xs leading-5 text-[#829287]">
+                AI results are assessments based on the submitted image.
+                Confirm uncertain diagnoses with reliable agricultural advice.
+              </p>
+
             </div>
-          </div>
+          </section>
+
+          {/* Rover status panel */}
+          <aside className="space-y-5">
+
+            <div className="rounded-2xl border border-[#E1E7DF] bg-white p-5 shadow-sm">
+
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#F0F2ED] text-[#829287]">
+                  <Radio className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="font-semibold text-[#183D32]">
+                    Rover camera
+                  </h2>
+                  <p className="mt-1 text-xs text-[#829287]">
+                    Field monitoring
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 rounded-xl border border-dashed border-[#DCE4DA] bg-[#FAFBF8] p-5 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F2ED] text-[#829287]">
+                  <Camera className="h-6 w-6" />
+                </div>
+
+                <p className="mt-3 text-sm font-semibold text-[#354B3D]">
+                  Rover integration pending
+                </p>
+
+                <p className="mt-2 text-xs leading-5 text-[#829287]">
+                  Live rover camera monitoring will become available after
+                  the rover hardware and communication system are integrated.
+                </p>
+
+                <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
+                  <Clock3 className="h-3.5 w-3.5" />
+                  Not connected
+                </span>
+              </div>
+            </div>
+
+            {/* How analysis works */}
+            <div className="rounded-2xl border border-[#E1E7DF] bg-white p-5 shadow-sm">
+              <h2 className="font-semibold text-[#183D32]">
+                How crop analysis works
+              </h2>
+
+              <div className="mt-4 space-y-4">
+                <div className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF4EC] text-xs font-bold text-[#315C47]">
+                    1
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-[#354B3D]">
+                      Capture or upload
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#829287]">
+                      Submit a photograph of the affected crop.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF4EC] text-xs font-bold text-[#315C47]">
+                    2
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-[#354B3D]">
+                      CEN AI analysis
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#829287]">
+                      The submitted image is sent to the configured analysis backend.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-3">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF4EC] text-xs font-bold text-[#315C47]">
+                    3
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium text-[#354B3D]">
+                      Review results
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[#829287]">
+                      Review the returned diagnosis and recommendations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </aside>
         </div>
+
+        <footer className="border-t border-[#E1E7DF] pt-4 text-center text-xs text-[#829287]">
+          EnFarm · Phone-based crop analysis and future rover monitoring
+        </footer>
+
       </div>
     </motion.div>
   );
