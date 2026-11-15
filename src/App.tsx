@@ -369,11 +369,8 @@ useEffect(() => {
               />
             )}
             {activeTab === Tab.UPLOAD_ANALYSIS && (
-              <UploadAnalysisView
-                onAnalyzeImage={handleAnalyzeCropImage}
-                isAnalyzing={isAnalyzingImage}
-              />
-            )}
+  <RoverMonitoringView />
+)}
             {activeTab === Tab.ANALYSIS_RESULTS && (
               <AnalysisResultsView
                 analyses={analyses}
