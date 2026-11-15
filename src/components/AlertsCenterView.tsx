@@ -1,6 +1,17 @@
+
 import React from "react";
-import { Alert, Tab } from "../types";
-import { Bell, AlertTriangle, AlertCircle, Info, Check, Trash2 } from "lucide-react";
+import type { Alert, Tab } from "../types";
+import {
+  Bell,
+  AlertTriangle,
+  AlertCircle,
+  Info,
+  Check,
+  Trash2,
+  Clock3,
+  ShieldCheck,
+  CircleDot,
+} from "lucide-react";
 import { motion } from "motion/react";
 
 interface AlertsCenterViewProps {
@@ -10,139 +21,309 @@ interface AlertsCenterViewProps {
   setActiveTab: (tab: Tab) => void;
 }
 
+const severityStyles: Record<string, string> = {
+  Severe: "bg-rose-50 text-rose-700 border-rose-200",
+  High: "bg-red-50 text-red-700 border-red-200",
+  Medium: "bg-amber-50 text-amber-700 border-amber-200",
+  Low: "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+
+function SeverityIcon({ level }: { level: string }) {
+  switch (level) {
+    case "Severe":
+      return <AlertCircle className="h-5 w-5 text-rose-600" />;
+    case "High":
+      return <AlertTriangle className="h-5 w-5 text-red-600" />;
+    case "Medium":
+      return <AlertTriangle className="h-5 w-5 text-amber-600" />;
+    default:
+      return <Info className="h-5 w-5 text-[#557C91]" />;
+  }
+}
+
+function AlertCard({
+  alert,
+  onMarkRead,
+}: {
+  alert: Alert;
+  onMarkRead: (id: string) => void;
+}) {
+  const severityClass =
+    severityStyles[alert.riskLevel] ||
+    "bg-[#F0F5EE] text-[#52665A] border-[#DCE4DA]";
+
+  return (
+    <article className="rounded-2xl border border-[#E1E7DF] bg-white p-4 shadow-sm transition-colors hover:border-[#B8CCB9] sm:p-5">
+      <div className="flex items-start gap-3">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F6F8F3]">
+          <SeverityIcon level={alert.riskLevel} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="break-words text-sm font-semibold text-[#183D32]">
+              {alert.title}
+            </h3>
+
+            <span
+              className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide ${severityClass}`}
+            >
+              {alert.riskLevel}
+            </span>
+          </div>
+
+          <p className="mt-2 break-words text-sm leading-6 text-[#66766B]">
+            {alert.message}
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-[#EEF1EB] pt-3 text-xs text-[#829287]">
+            <span className="flex items-center gap-1.5">
+              <CircleDot className="h-3.5 w-3.5" />
+              {alert.category}
+            </span>
+
+            <span className="flex items-center gap-1.5">
+              <Clock3 className="h-3.5 w-3.5" />
+              {alert.timestamp}
+            </span>
+          </div>
+        </div>
+
+        {!alert.read && (
+          <button
+            type="button"
+            onClick={() => onMarkRead(alert.id)}
+            title="Mark as read"
+            aria-label={`Mark ${alert.title} as read`}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#DCE4DA] text-[#718076] transition-colors hover:border-[#8DB49A] hover:bg-[#F0F6F0] hover:text-[#315C47]"
+          >
+            <Check className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function EmptyState({
+  title,
+  detail,
+}: {
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[#DCE4DA] bg-[#FAFBF8] px-5 py-12 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EDF4EC] text-[#829287]">
+        <Bell className="h-7 w-7" />
+      </div>
+
+      <h3 className="mt-4 font-semibold text-[#354B3D]">{title}</h3>
+
+      <p className="mt-2 max-w-sm text-sm leading-6 text-[#829287]">
+        {detail}
+      </p>
+    </div>
+  );
+}
+
 export default function AlertsCenterView({
   alerts,
   onMarkRead,
   onClearAll,
-  setActiveTab
+  setActiveTab,
 }: AlertsCenterViewProps) {
-  
-  const unreadAlerts = alerts.filter(a => !a.read);
-  const readAlerts = alerts.filter(a => a.read);
-
-  const getAlertIcon = (level: string) => {
-    switch (level) {
-      case "Severe":
-        return <AlertCircle className="w-5 h-5 text-rose-400" />;
-      case "High":
-        return <AlertTriangle className="w-5 h-5 text-amber-400" />;
-      default:
-        return <Info className="w-5 h-5 text-sky-400" />;
-    }
-  };
+  const unreadAlerts = alerts.filter((alert) => !alert.read);
+  const readAlerts = alerts.filter((alert) => alert.read);
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 15 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -15 }}
-      transition={{ duration: 0.3 }}
-      className="p-6 h-full overflow-y-auto pr-4 space-y-6"
+      transition={{ duration: 0.25 }}
+      className="h-full overflow-y-auto bg-[#F4F5F0] p-4 sm:p-6 lg:p-8"
     >
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-display font-bold text-white flex items-center gap-2">
-            <Bell className="text-emerald-400 w-7 h-7" /> Alerts & Threat Center
-          </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            alerts center 
-          </p>
-        </div>
-        
-        {alerts.length > 0 && (
-          <button
-            onClick={onClearAll}
-            className="bg-[#1b2333] border border-slate-800 text-slate-350 hover:bg-[#222b3e] text-xs font-semibold px-4 py-2.5 rounded-xl flex items-center gap-2 max-w-max cursor-pointer text-slate-300"
-          >
-            <Trash2 className="w-4 h-4 text-rose-400" /> Clear Selected Logs
-          </button>
-        )}
-      </div>
+      <div className="mx-auto max-w-7xl space-y-6">
 
-      {alerts.length === 0 ? (
-        <div className="p-12 text-center bg-[#151c28] border border-slate-800 rounded-2xl">
-          <Check className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
-          <h3 className="text-white text-lg font-bold">All clear! No threats flagged</h3>
-          <p className="text-slate-400 text-sm mt-1">Active microclimates are completely steady and fully hydrated.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
-          {/* Active unread threats (8 cols) */}
-          <div className="lg:col-span-8 space-y-4">
-            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" /> Active Threats ({unreadAlerts.length})
-            </h3>
+        {/* Page heading */}
+        <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <p className="text-xs font-semibold tracking-[0.16em] text-[#557C62]">
+              FARM MONITORING
+            </p>
 
-            {unreadAlerts.length === 0 ? (
-              <p className="text-xs text-slate-400 italic p-4 bg-slate-900/40 border border-slate-800/40 rounded-xl">
-                No active severe alerts flagged in microclimate segments.
-              </p>
-            ) : (
-              <div className="space-y-3">
-                {unreadAlerts.map(alert => (
-                  <div
-                    key={alert.id}
-                    className="p-4 bg-slate-950/20 border border-slate-800/80 hover:border-slate-700/80 rounded-2xl flex gap-4 items-start relative overflow-hidden group hover:bg-[#192233]/40 transition-colors"
-                  >
-                    <div className="mt-0.5 shrink-0">
-                      {getAlertIcon(alert.riskLevel)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-sm font-semibold text-slate-200 block">{alert.title}</span>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded font-mono uppercase ${
-                          alert.riskLevel === 'Severe' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                          alert.riskLevel === 'High' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                          'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                        }`}>
-                          {alert.riskLevel}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-405 mt-1 leading-relaxed text-slate-400">{alert.message}</p>
-                      <div className="flex justify-between items-center mt-3 text-[10px] text-slate-500 font-mono">
-                        <span>Category: {alert.category}</span>
-                        <span>Logged {alert.timestamp}</span>
-                      </div>
-                    </div>
-                    
-                    {/* Action pill: mark as read */}
-                    <button
-                      onClick={() => onMarkRead(alert.id)}
-                      className="ml-2 bg-[#1c2636] hover:bg-emerald-500 hover:text-slate-950 p-2 rounded-lg text-slate-400 transition-colors shrink-0 cursor-pointer self-center"
-                      title="Mark as addressed"
+            <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight text-[#183D32] sm:text-3xl">
+              <Bell className="h-7 w-7 text-[#477C62]" />
+              Alerts Center
+            </h1>
+
+            <p className="mt-2 text-sm text-[#718076]">
+              Review recorded alerts and monitor reported farm conditions.
+            </p>
+          </div>
+
+          {alerts.length > 0 && (
+            <button
+              type="button"
+              onClick={onClearAll}
+              className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#E8D8D5] bg-white px-4 py-2.5 text-sm font-medium text-[#A34B43] transition-colors hover:bg-[#FFF6F5]"
+            >
+              <Trash2 className="h-4 w-4" />
+              Clear all alerts
+            </button>
+          )}
+        </header>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[#E1E7DF] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-[#718076]">
+                Unread alerts
+              </span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#FFF3E8] text-[#B96D36]">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+            </div>
+
+            <p className="mt-4 text-3xl font-semibold text-[#183D32]">
+              {unreadAlerts.length}
+            </p>
+
+            <p className="mt-1 text-xs text-[#829287]">
+              Recorded alerts not yet marked as read
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-[#E1E7DF] bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-[#718076]">
+                Read alerts
+              </span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EDF4EC] text-[#477C62]">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
+            </div>
+
+            <p className="mt-4 text-3xl font-semibold text-[#183D32]">
+              {readAlerts.length}
+            </p>
+
+            <p className="mt-1 text-xs text-[#829287]">
+              Alerts previously marked as read
+            </p>
+          </div>
+        </div>
+
+        {/* No alerts */}
+        {alerts.length === 0 ? (
+          <EmptyState
+            title="No alerts recorded"
+            detail="No alert records have been supplied to this dashboard. This does not confirm that farms or connected devices are operating normally."
+          />
+        ) : (
+          <div className="grid grid-cols-1 items-start gap-6 xl:grid-cols-3">
+
+            {/* Unread alerts */}
+            <section className="space-y-4 xl:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold text-[#183D32]">
+                    Unread alerts
+                  </h2>
+                  <p className="mt-1 text-xs text-[#829287]">
+                    Recorded alerts awaiting review
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-[#EDF4EC] px-3 py-1.5 text-xs font-semibold text-[#477C62]">
+                  {unreadAlerts.length} unread
+                </span>
+              </div>
+
+              {unreadAlerts.length === 0 ? (
+                <EmptyState
+                  title="No unread alerts"
+                  detail="All currently recorded alerts have been marked as read. This does not mean the underlying farm conditions have been resolved."
+                />
+              ) : (
+                <div className="space-y-3">
+                  {unreadAlerts.map((alert) => (
+                    <AlertCard
+                      key={alert.id}
+                      alert={alert}
+                      onMarkRead={onMarkRead}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Read alerts */}
+            <section className="space-y-4">
+              <div>
+                <h2 className="font-semibold text-[#183D32]">
+                  Alert history
+                </h2>
+                <p className="mt-1 text-xs text-[#829287]">
+                  Previously read alert records
+                </p>
+              </div>
+
+              {readAlerts.length === 0 ? (
+                <EmptyState
+                  title="No read alerts"
+                  detail="There are no alerts marked as read in the available records."
+                />
+              ) : (
+                <div className="space-y-3">
+                  {readAlerts.map((alert) => (
+                    <article
+                      key={alert.id}
+                      className="rounded-2xl border border-[#E1E7DF] bg-white p-4 shadow-sm"
                     >
-                      <Check className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#F0F5EE]">
+                          <Check className="h-4 w-4 text-[#477C62]" />
+                        </div>
 
-          {/* Historical/Read logs (4 cols) */}
-          <div className="lg:col-span-4 bg-[#151c28] border border-slate-800/80 p-5 rounded-2xl space-y-4">
-            <h3 className="text-sm font-semibold text-slate-350 text-slate-200">History Log ({readAlerts.length})</h3>
-            
-            {readAlerts.length === 0 ? (
-              <p className="text-xs text-slate-500 italic">No cleared logs recorded this season.</p>
-            ) : (
-              <div className="space-y-2.5 max-h-[460px] overflow-y-auto pr-1">
-                {readAlerts.map(alert => (
-                  <div key={alert.id} className="p-3 bg-slate-900/20 border border-slate-800/40 rounded-xl opacity-60 hover:opacity-100 transition-opacity">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-semibold text-slate-300 line-through">{alert.title}</span>
-                      <span className="text-[9px] font-mono text-slate-500">{alert.category}</span>
-                    </div>
-                    <span className="text-[10px] text-slate-500 mt-1.5 block">Closed • {alert.timestamp}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="break-words text-sm font-semibold text-[#354B3D]">
+                            {alert.title}
+                          </h3>
 
-        </div>
-      )}
+                          <p className="mt-1 text-xs leading-5 text-[#829287]">
+                            {alert.category}
+                          </p>
+
+                          <p className="mt-2 text-[11px] text-[#9AA79D]">
+                            Marked as read · {alert.timestamp}
+                          </p>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[#E1E7DF] pt-5">
+          <p className="text-xs text-[#829287]">
+            Displaying {alerts.length} alert records supplied to EnFarm.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("DASHBOARD" as Tab)}
+            className="text-sm font-semibold text-[#315C47] transition-colors hover:text-[#183D32] hover:underline"
+          >
+            Return to Home
+          </button>
+        </footer>
+      </div>
     </motion.div>
   );
 }
