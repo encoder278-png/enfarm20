@@ -85,23 +85,31 @@ export interface FarmSettings {
   apiGroundingEnabled: boolean;
 }
 export interface FarmerProfile {
+ export interface FarmerProfile {
   farmerId: string;
   organizationId?: string;
   name?: string;
   region?: string;
   crops: string[];
+
   diseases: {
+    id?: string;
+    source?: string;
     cropType: string | null;
     diagnosis: string | null;
     severity: string | null;
     healthScore: number | null;
     confidence: number | null;
     timestamp: string;
+    recommendations?: string[];
+    imageUrl?: string;
   }[];
+
   conversations: {
     role: "farmer" | "cen";
     text: string;
     timestamp: string;
   }[];
+
   lastActive: string;
 }
