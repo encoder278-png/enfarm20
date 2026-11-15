@@ -32,7 +32,7 @@ export default function Sidebar({
     { tab: Tab.HISTORY, label: "History", icon: HistoryIcon },
     { tab: Tab.WHATSAPP_CHAT, label: "WhatsApp", icon: MessageCircle },
     { tab: Tab.ALERTS_CENTER, label: "Alerts", icon: Bell },
-    { tab: Tab.ANALYSIS_RESULTS, label: "Reports", icon: FileText },
+   { tab: Tab.REPORTS, label: "Reports", icon: FileText },
     { tab: Tab.SETTINGS, label: "Settings", icon: Settings },
   ];
 
