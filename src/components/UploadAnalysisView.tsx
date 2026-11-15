@@ -2,7 +2,6 @@
 import React, { useRef, useState } from "react";
 import {
   UploadCloud,
-  Camera,
   ImagePlus,
   CheckCircle,
   AlertTriangle,
@@ -11,6 +10,7 @@ import {
   X,
   Radio,
   Clock3,
+  FileImage,
 } from "lucide-react";
 import { motion } from "motion/react";
 
@@ -45,6 +45,7 @@ export default function UploadAnalysisView({
   isAnalyzing,
 }: UploadAnalysisViewProps) {
   const [selectedCrop, setSelectedCrop] = useState("Auto-Detect");
+
   const [uploadedFile, setUploadedFile] = useState<{
     name: string;
     size: string;
@@ -53,11 +54,9 @@ export default function UploadAnalysisView({
   } | null>(null);
 
   const [error, setError] = useState("");
-
   const [dragActive, setDragActive] = useState(false);
 
-  const galleryInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const processFile = (file?: File) => {
     if (!file) return;
@@ -150,16 +149,17 @@ export default function UploadAnalysisView({
         {/* Page heading */}
         <header>
           <p className="text-xs font-semibold tracking-[0.16em] text-[#557C62]">
-            CROP MONITORING
+            FIELD INTELLIGENCE
           </p>
 
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[#183D32] sm:text-3xl">
-            Camera & Crop Analysis
+            Crop Image Analysis
           </h1>
 
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[#718076]">
-            Photograph a crop using your phone or upload an existing image
-            to request an analysis from CEN AI.
+            Upload crop photographs to CEN AI for analysis.
+            Review potential crop diseases, pest problems and
+            recommended agricultural actions.
           </p>
         </header>
 
@@ -179,25 +179,16 @@ export default function UploadAnalysisView({
                   <h2 className="font-semibold text-[#183D32]">
                     Submit a crop image
                   </h2>
+
                   <p className="mt-1 text-xs text-[#829287]">
-                    Use your phone camera or image gallery
+                    Upload an image from your computer
                   </p>
                 </div>
               </div>
 
-              {/* Hidden image inputs */}
+              {/* File input */}
               <input
-                ref={cameraInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                capture="environment"
-                className="hidden"
-                onChange={handleFileChange}
-                disabled={isAnalyzing}
-              />
-
-              <input
-                ref={galleryInputRef}
+                ref={fileInputRef}
                 type="file"
                 accept="image/jpeg,image/png,image/webp"
                 className="hidden"
@@ -219,9 +210,11 @@ export default function UploadAnalysisView({
                     {isAnalyzing && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#183D32]/75 text-white">
                         <Cpu className="h-8 w-8 animate-spin" />
+
                         <p className="mt-3 text-sm font-semibold">
                           CEN AI is analyzing your image
                         </p>
+
                         <p className="mt-1 text-xs text-white/75">
                           Please wait for the result
                         </p>
@@ -230,6 +223,7 @@ export default function UploadAnalysisView({
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
+
                     <div className="flex min-w-0 items-center gap-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EDF4EC] text-[#477C62]">
                         <CheckCircle className="h-5 w-5" />
@@ -239,6 +233,7 @@ export default function UploadAnalysisView({
                         <p className="truncate text-sm font-semibold text-[#354B3D]">
                           {uploadedFile.name}
                         </p>
+
                         <p className="text-xs text-[#829287]">
                           {uploadedFile.size} · {uploadedFile.mimeType}
                         </p>
@@ -255,17 +250,16 @@ export default function UploadAnalysisView({
                       Remove image
                     </button>
                   </div>
-
                 </div>
               ) : (
                 <div
                   onDragOver={(event) => {
                     event.preventDefault();
-                    setDragActive(true);
+                    if (!isAnalyzing) setDragActive(true);
                   }}
                   onDragLeave={() => setDragActive(false)}
                   onDrop={handleDrop}
-                  className={`flex min-h-[250px] flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors ${
+                  className={`flex min-h-[260px] flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors ${
                     dragActive
                       ? "border-[#477C62] bg-[#EDF4EC]"
                       : "border-[#DCE4DA] bg-[#FAFBF8]"
@@ -276,44 +270,42 @@ export default function UploadAnalysisView({
                   </div>
 
                   <h3 className="mt-4 font-semibold text-[#354B3D]">
-                    Add a crop photograph
+                    Upload a crop photograph
                   </h3>
 
                   <p className="mt-2 max-w-sm text-sm leading-6 text-[#829287]">
-                    Select a crop image from your device or take a new
-                    photograph using your phone camera.
+                    Select a crop image stored on your computer
+                    or drag and drop an image into this area.
                   </p>
 
                   <p className="mt-3 text-xs text-[#9AA79D]">
                     JPEG, PNG or WebP · Maximum 10 MB
                   </p>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isAnalyzing}
+                    className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#183D32] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#285541] disabled:opacity-50"
+                  >
+                    <UploadCloud className="h-5 w-5" />
+                    Browse images
+                  </button>
                 </div>
               )}
 
-              {/* Camera and gallery actions */}
-              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-
+              {/* Change image action */}
+              {uploadedFile && (
                 <button
                   type="button"
-                  onClick={() => cameraInputRef.current?.click()}
+                  onClick={() => fileInputRef.current?.click()}
                   disabled={isAnalyzing}
-                  className="flex items-center justify-center gap-2 rounded-xl bg-[#183D32] px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#285541] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-[#DCE4DA] bg-white px-4 py-3 text-sm font-semibold text-[#315C47] transition-colors hover:bg-[#F6F8F3] disabled:opacity-50"
                 >
-                  <Camera className="h-5 w-5" />
-                  Take a photo
+                  <FileImage className="h-4 w-4" />
+                  Choose another image
                 </button>
-
-                <button
-                  type="button"
-                  onClick={() => galleryInputRef.current?.click()}
-                  disabled={isAnalyzing}
-                  className="flex items-center justify-center gap-2 rounded-xl border border-[#DCE4DA] bg-white px-4 py-3.5 text-sm font-semibold text-[#315C47] transition-colors hover:bg-[#F6F8F3] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  <UploadCloud className="h-5 w-5" />
-                  Choose from gallery
-                </button>
-
-              </div>
+              )}
 
               {/* Crop selection */}
               <div className="mt-6 border-t border-[#E8ECE5] pt-5">
@@ -367,7 +359,7 @@ export default function UploadAnalysisView({
                 ) : (
                   <>
                     <Cpu className="h-5 w-5" />
-                    Analyze crop photo
+                    Analyze crop image
                   </>
                 )}
               </button>
@@ -376,13 +368,13 @@ export default function UploadAnalysisView({
                 AI results are assessments based on the submitted image.
                 Confirm uncertain diagnoses with reliable agricultural advice.
               </p>
-
             </div>
           </section>
 
-          {/* Rover status panel */}
+          {/* Rover and workflow panel */}
           <aside className="space-y-5">
 
+            {/* Rover status */}
             <div className="rounded-2xl border border-[#E1E7DF] bg-white p-5 shadow-sm">
 
               <div className="flex items-center gap-3">
@@ -394,6 +386,7 @@ export default function UploadAnalysisView({
                   <h2 className="font-semibold text-[#183D32]">
                     Rover camera
                   </h2>
+
                   <p className="mt-1 text-xs text-[#829287]">
                     Field monitoring
                   </p>
@@ -402,7 +395,7 @@ export default function UploadAnalysisView({
 
               <div className="mt-5 rounded-xl border border-dashed border-[#DCE4DA] bg-[#FAFBF8] p-5 text-center">
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-[#F0F2ED] text-[#829287]">
-                  <Camera className="h-6 w-6" />
+                  <Radio className="h-6 w-6" />
                 </div>
 
                 <p className="mt-3 text-sm font-semibold text-[#354B3D]">
@@ -410,34 +403,38 @@ export default function UploadAnalysisView({
                 </p>
 
                 <p className="mt-2 text-xs leading-5 text-[#829287]">
-                  Live rover camera monitoring will become available after
-                  the rover hardware and communication system are integrated.
+                  Live field camera monitoring will become available
+                  after the rover hardware and communication system
+                  are integrated.
                 </p>
 
                 <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700">
                   <Clock3 className="h-3.5 w-3.5" />
-                  Not connected
+                  Not yet integrated
                 </span>
               </div>
             </div>
 
-            {/* How analysis works */}
+            {/* Analysis workflow */}
             <div className="rounded-2xl border border-[#E1E7DF] bg-white p-5 shadow-sm">
               <h2 className="font-semibold text-[#183D32]">
                 How crop analysis works
               </h2>
 
               <div className="mt-4 space-y-4">
+
                 <div className="flex gap-3">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF4EC] text-xs font-bold text-[#315C47]">
                     1
                   </span>
+
                   <div>
                     <p className="text-sm font-medium text-[#354B3D]">
-                      Capture or upload
+                      Select a crop image
                     </p>
+
                     <p className="mt-1 text-xs leading-5 text-[#829287]">
-                      Submit a photograph of the affected crop.
+                      Upload an available photograph of the affected crop.
                     </p>
                   </div>
                 </div>
@@ -446,12 +443,14 @@ export default function UploadAnalysisView({
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF4EC] text-xs font-bold text-[#315C47]">
                     2
                   </span>
+
                   <div>
                     <p className="text-sm font-medium text-[#354B3D]">
                       CEN AI analysis
                     </p>
+
                     <p className="mt-1 text-xs leading-5 text-[#829287]">
-                      The submitted image is sent to the configured analysis backend.
+                      The image is submitted to the configured analysis backend.
                     </p>
                   </div>
                 </div>
@@ -460,15 +459,18 @@ export default function UploadAnalysisView({
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#EDF4EC] text-xs font-bold text-[#315C47]">
                     3
                   </span>
+
                   <div>
                     <p className="text-sm font-medium text-[#354B3D]">
                       Review results
                     </p>
+
                     <p className="mt-1 text-xs leading-5 text-[#829287]">
-                      Review the returned diagnosis and recommendations.
+                      Review the returned assessment and recommendations.
                     </p>
                   </div>
                 </div>
+
               </div>
             </div>
 
@@ -476,7 +478,7 @@ export default function UploadAnalysisView({
         </div>
 
         <footer className="border-t border-[#E1E7DF] pt-4 text-center text-xs text-[#829287]">
-          EnFarm · Phone-based crop analysis and future rover monitoring
+          EnFarm · Agricultural Officer Workspace
         </footer>
 
       </div>
