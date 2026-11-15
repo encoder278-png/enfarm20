@@ -270,42 +270,45 @@ async function startServer() {
   });
 
   // API Route: AI Assistant Chat
-  app.post("/api/chat", aiRateLimit, async (req, res) => {
-    try {
-      const { message, history, farmerId } = req.body;
-      if (!message) {
-        return res.status(400).json({ error: "Message parameter is required." });
-      }
-      let farmerMemory = null;
 
-if (farmerId) {
+app.post("/api/chat", aiRateLimit, async (req, res) => {
   try {
-    farmerMemory = await getFarmer(farmerId);
-    console.log("Farmer memory loaded:", farmerMemory);
-  } catch (err) {
-    console.error("Memory load error:", err);
-  }
-}
+    const { message, history, farmerId } = req.body;
 
-const memoryContext =
-  buildFarmerContext(farmerMemory);
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({
+        error: "Message parameter is required."
+      });
+    }
 
-   
-      let client: OpenAI;
+    // Load the farmer's existing memory first
+    let farmerMemory: any = null;
+
+    if (farmerId) {
       try {
-        client = getGroqClient();
-      } catch (err: any) {
-        if (err.message === "API_KEY_MISSING") {
-          return res.status(503).json({
-            error: "CEN AI is temporarily unavailable. Please try again later.",
-            code: "CHAT_AI_UNAVAILABLE"
-          });
-        }
-        throw err;
+        farmerMemory = await getFarmer(farmerId);
+      } catch (err) {
+        console.error("Farmer memory load error:", err);
       }
+    }
 
+    const memoryContext = buildFarmerContext(farmerMemory);
 
-const systemInstruction = `
+    let client: OpenAI;
+
+    try {
+      client = getGroqClient();
+    } catch (err: any) {
+      if (err.message === "API_KEY_MISSING") {
+        return res.status(503).json({
+          error: "CEN AI is temporarily unavailable. Please try again later.",
+          code: "CHAT_AI_UNAVAILABLE"
+        });
+      }
+      throw err;
+    }
+
+    const systemInstruction = `
 ${memoryContext}
 
 You are CEN, the EnFarm AI agricultural assistant for Tanzanian smallholder farmers.
@@ -315,66 +318,91 @@ LANGUAGE: Always respond in simple Swahili. Use English only for scientific crop
 YOUR FOCUS CROPS: Mahindi (maize), Muhogo (cassava), Mpunga (rice), Alizeti (sunflower), Maharage (beans).
 
 RULES:
-1. Respond directly to the farmer's question. No unnecessary introduction.
+1. Respond directly to the farmer's question.
 2. If a farmer describes a crop problem, ask one clarifying question OR ask for a photo before diagnosing.
-3. When diagnosing disease, give the Swahili name first, then the treatment in simple numbered steps.
-4. Keep responses short. Farmers read on small slow phones.
+3. When diagnosing disease, give the Swahili name first, then treatment in simple numbered steps.
+4. Keep responses short.
 5. Never recommend products a Tanzanian farmer cannot find locally.
 6. End every response with one simple action the farmer can take today.
 7. If asked anything unrelated to farming, politely redirect back to agriculture.
 `;
 
-      // Build messages array for Groq
-      const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: "system", content: systemInstruction }
-      ];
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: "system", content: systemInstruction }
+    ];
 
-      if (history && Array.isArray(history)) {
-        for (const h of history.slice(-10)) {
-          messages.push({
-            role: h.role === "user" ? "user" : "assistant",
-            content: h.text
-          });
-        }
+    if (history && Array.isArray(history)) {
+      for (const h of history.slice(-10)) {
+        if (!h || typeof h.text !== "string") continue;
+
+        messages.push({
+          role: h.role === "user" ? "user" : "assistant",
+          content: h.text
+        });
       }
-      messages.push({ role: "user", content: message });
-
-      const completion = await client.chat.completions.create({
-        model: GROQ_MODEL,
-        messages,
-        max_tokens: 500,
-        temperature: 0.7,
-      });
-
-      const aiResponse = completion.choices[0]?.message?.content || "I was unable to analyze this crop request.";
-
-      // groundingSources is empty — Groq does not have Google Search grounding
-      const sources: any[] = [];
-
-if (farmerId) {
-  try {
-    await saveFarmer(farmerId, {
-      ...(farmerMemory || {}),
-      farmerId,
-      lastMessage: message,
-      lastResponse: aiResponse,
-      lastActive: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error("Memory save error:", err);
-  }
-}
-
-res.json({
-  text: aiResponse,
-  groundingSources: sources
-});
-
-    } catch (error: any) {
-      console.error("Chat API error:", error);
-      res.status(500).json({ error: error.message || "Internal Farm Engine error." });
     }
-  });
+
+    messages.push({
+      role: "user",
+      content: message
+    });
+
+    const completion = await client.chat.completions.create({
+      model: GROQ_MODEL,
+      messages,
+      max_tokens: 500,
+      temperature: 0.7,
+    });
+
+    const aiResponse =
+      completion.choices[0]?.message?.content ||
+      "Samahani, sikuweza kupata jibu. Jaribu tena.";
+
+    // Save the exchange AFTER CEN has generated its answer
+    if (farmerId) {
+      try {
+        const now = new Date().toISOString();
+
+        await saveFarmer(farmerId, {
+          ...(farmerMemory || {}),
+          farmerId,
+
+          conversations: [
+            ...(farmerMemory?.conversations || []).slice(-9),
+            {
+              role: "farmer",
+              text: message,
+              timestamp: now
+            },
+            {
+              role: "cen",
+              text: aiResponse,
+              timestamp: now
+            }
+          ],
+
+          lastMessage: message,
+          lastResponse: aiResponse,
+          lastActive: now
+        });
+      } catch (err) {
+        console.error("Web chat memory save error:", err);
+      }
+    }
+
+    res.json({
+      text: aiResponse,
+      groundingSources: []
+    });
+
+  } catch (error: any) {
+    console.error("Chat API error:", error);
+
+    res.status(500).json({
+      error: error.message || "Internal Farm Engine error."
+    });
+  }
+});
 
   // API Route: Image Leaf Diagnosis — UNCHANGED, still uses Gemini
   app.post("/api/analyze-image", aiRateLimit, async (req, res) => {
