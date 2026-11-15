@@ -22,17 +22,20 @@ export interface ChatMessage {
 }
 
 export interface AnalysisRecord {
+  export interface AnalysisRecord {
   id: string;
+  farmerId?: string;
+  source?: string;
   title: string;
   date: string;
   time: string;
   cropType: string;
-  healthScore: number;
-  riskLevel: 'Low' | 'Medium' | 'High';
+  healthScore: number | null;
+  riskLevel: 'Low' | 'Medium' | 'High' | 'Unknown';
   diagnose: string;
   recommendations: string[];
   imageUrl?: string;
-  confidence: number;
+  confidence: number | null;
   status: 'Completed' | 'Pending' | 'Failed';
 }
 
