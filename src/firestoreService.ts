@@ -5,11 +5,12 @@ import {
   collection,
   onSnapshot,
   query,
-  type Firestore
+  type Firestore,
 } from "firebase/firestore";
-import { FarmerProfile, AnalysisRecord } from "./types";
 
-// Initialize Firebase for the frontend
+import type { FarmerProfile, AnalysisRecord } from "./types";
+
+// Initialize Firebase
 function getDb(): Firestore {
   if (getApps().length > 0) {
     return getFirestore(getApp());
@@ -27,16 +28,34 @@ function getDb(): Firestore {
   return getFirestore(app);
 }
 
-// Safely parse a timestamp without inventing a date
+// Safely parse timestamps without inventing dates.
 function parseTimestamp(timestamp: string | undefined): Date | null {
-  if (!timestamp) return null;
+  if (!timestamp || typeof timestamp !== "string") {
+    return null;
+  }
 
   const parsed = new Date(timestamp);
 
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
-// Listen to all farmers
+// Format dates using the browser's local timezone.
+function formatDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function formatTime(date: Date): string {
+  return date.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+// Listen to all farmers.
 export function listenToFarmers(
   callback: (farmers: FarmerProfile[]) => void
 ): () => void {
@@ -47,13 +66,22 @@ export function listenToFarmers(
     return onSnapshot(
       q,
       (snapshot) => {
-        const farmers = snapshot.docs.map(
-          (doc) => doc.data() as FarmerProfile
-        );
+        const farmers: FarmerProfile[] = snapshot.docs.map((doc) => {
+          const data = doc.data();
+
+          return {
+            ...data,
+            farmerId:
+              typeof data.farmerId === "string" && data.farmerId
+                ? data.farmerId
+                : doc.id,
+          } as FarmerProfile;
+        });
 
         farmers.sort((a, b) => {
           const dateA = parseTimestamp(a.lastActive)?.getTime() ?? 0;
           const dateB = parseTimestamp(b.lastActive)?.getTime() ?? 0;
+
           return dateB - dateA;
         });
 
@@ -61,17 +89,18 @@ export function listenToFarmers(
       },
       (err) => {
         console.error("Firestore farmers listener error:", err);
-        callback([]);
+
+        // Preserve the existing UI state.
+        // An error must not look like an empty farmer collection.
       }
     );
   } catch (err) {
-    console.error("Firestore initialization error:", err);
-    callback([]);
+    console.error("Firestore farmers initialization error:", err);
     return () => {};
   }
 }
 
-// Listen to assessments saved inside each farmer's diseases array
+// Listen to assessments saved inside each farmer's diseases array.
 export function listenToAnalyses(
   callback: (analyses: AnalysisRecord[]) => void
 ): () => void {
@@ -82,27 +111,47 @@ export function listenToAnalyses(
     return onSnapshot(
       q,
       (snapshot) => {
-        const allAnalyses: AnalysisRecord[] = [];
+        const allAnalyses: {
+          record: AnalysisRecord;
+          timestampMs: number;
+        }[] = [];
 
         snapshot.docs.forEach((doc) => {
-          const farmer = doc.data() as FarmerProfile;
+          const data = doc.data();
 
-          (farmer.diseases || []).forEach((d, index) => {
-            const timestamp = parseTimestamp(d.timestamp);
+          const farmerId =
+            typeof data.farmerId === "string" && data.farmerId
+              ? data.farmerId
+              : doc.id;
 
-            // Do not invent a date or time when the timestamp is missing.
+          const diseases = Array.isArray(data.diseases)
+            ? data.diseases
+            : [];
+
+          diseases.forEach((d, index) => {
+            if (!d || typeof d !== "object") {
+              return;
+            }
+
+            const timestamp =
+              typeof d.timestamp === "string"
+                ? parseTimestamp(d.timestamp)
+                : null;
+
+            const timestampMs = timestamp?.getTime() ?? 0;
+
             const date = timestamp
-              ? timestamp.toISOString().split("T")[0]
+              ? formatDate(timestamp)
               : "Unknown";
 
             const time = timestamp
-              ? timestamp.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })
+              ? formatTime(timestamp)
               : "Unknown";
 
-            const severity = (d.severity || "").toLowerCase();
+            const severity =
+              typeof d.severity === "string"
+                ? d.severity.toLowerCase()
+                : "";
 
             let riskLevel: AnalysisRecord["riskLevel"] = "Unknown";
 
@@ -113,64 +162,95 @@ export function listenToAnalyses(
               severity === "medium"
             ) {
               riskLevel = "Medium";
-            } else if (severity === "low" || severity === "mild") {
+            } else if (
+              severity === "low" ||
+              severity === "mild"
+            ) {
               riskLevel = "Low";
             }
 
             const id =
-              d.id ||
-              `${farmer.farmerId}-${d.timestamp || "no-timestamp"}-${index}`;
+              typeof d.id === "string" && d.id
+                ? d.id
+                : `${farmerId}-${d.timestamp || "no-timestamp"}-${index}`;
 
-            allAnalyses.push({
+            const healthScore =
+              typeof d.healthScore === "number" &&
+              Number.isFinite(d.healthScore)
+                ? d.healthScore
+                : null;
+
+            const confidence =
+              typeof d.confidence === "number" &&
+              Number.isFinite(d.confidence)
+                ? d.confidence
+                : null;
+
+            const recommendations = Array.isArray(d.recommendations)
+              ? d.recommendations.filter(
+                  (item: unknown): item is string =>
+                    typeof item === "string" && item.trim().length > 0
+                )
+              : [];
+
+            const record: AnalysisRecord = {
               id,
-              farmerId: farmer.farmerId,
-              source: d.source,
+              farmerId,
+              source:
+                typeof d.source === "string" ? d.source : undefined,
 
               title: `${d.cropType || "Unknown crop"} assessment`,
               date,
               time,
 
-              cropType: d.cropType || "Unknown",
-              healthScore: d.healthScore ?? null,
+              cropType:
+                typeof d.cropType === "string" && d.cropType
+                  ? d.cropType
+                  : "Unknown",
+
+              healthScore,
               riskLevel,
 
-              diagnose: d.diagnosis || "No diagnosis recorded",
+              diagnose:
+                typeof d.diagnosis === "string" && d.diagnosis
+                  ? d.diagnosis
+                  : "No diagnosis recorded",
 
-              recommendations: Array.isArray(d.recommendations)
-                ? d.recommendations
-                : [],
+              recommendations,
 
-              imageUrl: d.imageUrl,
+              imageUrl:
+                typeof d.imageUrl === "string"
+                  ? d.imageUrl
+                  : undefined,
 
-              confidence: d.confidence ?? null,
+              confidence,
               status: "Completed",
+            };
+
+            allAnalyses.push({
+              record,
+              timestampMs,
             });
           });
         });
 
-        // Sort valid timestamps first, newest to oldest.
+        // Sort by the complete original timestamp.
+        // Records without timestamps appear last.
         allAnalyses.sort((a, b) => {
-          const dateA = parseTimestamp(
-            a.date === "Unknown" ? undefined : a.date
-          )?.getTime() ?? 0;
-
-          const dateB = parseTimestamp(
-            b.date === "Unknown" ? undefined : b.date
-          )?.getTime() ?? 0;
-
-          return dateB - dateA;
+          return b.timestampMs - a.timestampMs;
         });
 
-        callback(allAnalyses);
+        callback(allAnalyses.map((item) => item.record));
       },
       (err) => {
         console.error("Firestore analyses listener error:", err);
-        callback([]);
+
+        // Do not replace existing assessments with an empty array
+        // when Firestore reports an error.
       }
     );
   } catch (err) {
-    console.error("Firestore initialization error:", err);
-    callback([]);
+    console.error("Firestore analyses initialization error:", err);
     return () => {};
   }
 }
