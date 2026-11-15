@@ -22,7 +22,7 @@ import AlertsCenterView from "./components/AlertsCenterView";
 import ReportsView from "./components/ReportsView";
 import HistoryView from "./components/HistoryView";
 import SettingsView from "./components/SettingsView";
-import FarmersView from "./components/FarmersView";
+import FarmersView from "./components/FarmersView.";
 import WhatsAppChatView from "./components/WhatsAppChatView";
 
 import { listenToFarmers, listenToAnalyses } from "./firestoreService";
