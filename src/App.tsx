@@ -27,9 +27,18 @@ import WhatsAppChatView from "./components/WhatsAppChatView";
 
 import { listenToFarmers, listenToAnalyses } from "./firestoreService";
 import { Bell, Search, CloudSun } from "lucide-react";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 
 export default function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+useEffect(() => {
+  const timer = window.setTimeout(() => {
+    setShowSplash(false);
+  }, 1500);
+
+  return () => window.clearTimeout(timer);
+}, []);
   const [activeTab, setActiveTab] = useState<Tab>(Tab.DASHBOARD);
   const [selectedAnalysisId, setSelectedAnalysisId] = useState<string | null>(null);
 
@@ -177,6 +186,50 @@ export default function App() {
   const unreadAlertsCount = alerts.filter((alert) => !alert.read).length;
 
   return (
+    <>
+  <AnimatePresence>
+    {showSplash && (
+      <motion.div
+        key="enfarm-splash"
+        initial={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.5 }}
+        className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-[#F5F6F2]"
+      >
+        <motion.img
+          src="/pwa-512x512.png"
+          alt="EnFarm"
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          className="w-28 h-28 rounded-[28px] shadow-xl"
+        />
+
+        <h1 className="mt-5 text-3xl font-bold tracking-tight text-[#174B32]">
+          EnFarm
+        </h1>
+
+        <p className="mt-2 text-sm text-[#64816D]">
+          Smart Farming. Better Tomorrow.
+        </p>
+
+        <div className="mt-10 flex flex-col items-center gap-3">
+          <div className="w-32 h-1.5 rounded-full bg-[#DCE9DE] overflow-hidden">
+            <motion.div
+              className="h-full rounded-full bg-[#27834C]"
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 1.4, ease: "easeInOut" }}
+            />
+          </div>
+
+          <span className="text-xs text-[#64816D]">
+            Loading EnFarm...
+          </span>
+        </div>
+      </motion.div>
+    )}
+  </AnimatePresence>
     <div className="flex h-screen bg-[#0b0e14] text-slate-100 font-sans overflow-hidden select-none">
 
       {/* Sidebar */}
@@ -366,5 +419,6 @@ export default function App() {
         </main>
       </div>
     </div>
+    </>
   );
 }
