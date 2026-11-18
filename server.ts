@@ -654,6 +654,12 @@ app.post("/api/analyze-image", aiRateLimit, async (req, res) => {
 
   } catch (error: any) {
     console.error("Groq Vision image analysis error:", error);
+    if (error?.status === 429) {
+  return res.status(429).json({
+    error: "Image analysis is temporarily busy. Please try again shortly.",
+    code: "VISION_RATE_LIMIT"
+  });
+}
 
     return res.status(502).json({
       error: "Image analysis failed. Please try again.",
