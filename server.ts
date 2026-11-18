@@ -727,32 +727,6 @@ if (!imageResp.headers.get("content-type")?.startsWith("image/")) {
     
 const imageAssessment = await analyzeCropImage(base64Image, mimeType);
 
-let diagnosisRecord = null;
-
-if (imageAssessment.isPlant === true) {
-  diagnosisRecord = imageAssessment;
-
-  const recommendations = imageAssessment.recommendations
-    .map((item: string) => `• ${item}`)
-    .join("\n");
-
-  replyText =
-    `🌱 *Tathmini ya EnFarm*\n\n` +
-    `Zao: ${imageAssessment.crop}\n` +
-    `Afya ya zao: ${imageAssessment.healthScore ?? "Haijabainika"}/100\n` +
-    `Hatari: ${imageAssessment.riskLevel}\n` +
-    `Tatizo: ${imageAssessment.diagnosis}\n` +
-    `Ukali: ${imageAssessment.severity}\n` +
-    `Uhakika wa tathmini: ${Math.round(imageAssessment.confidence * 100)}%\n\n` +
-    `*Ushauri:*\n${recommendations}\n\n` +
-    `${imageAssessment.summary}`;
-} else if (imageAssessment.isPlant === false) {
-  replyText =
-    "Samahani, picha hii haionekani kuwa ya mmea. Tafadhali tuma picha iliyo wazi ya zao lako.";
-} else {
-  replyText =
-    "Sijaweza kutambua vizuri zao au tatizo kwenye picha hii. Tafadhali piga picha nyingine iliyo wazi yenye mwanga wa kutosha.";
-}
 
         let diagnosisRecord: any = null;
         try {
