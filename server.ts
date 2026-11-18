@@ -2,7 +2,6 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import OpenAI from "openai";
-import OpenAI from "openai";
 import dotenv from "dotenv";
 import { getFarmer, saveFarmer } from "./src/memoryService";
 import twilio from "twilio";
@@ -469,26 +468,20 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "20mb", extended: true }));
 
   // API Route: Health Check
-  app.get("/api/health", (req, res) => {
-   const groqConfigured = !!process.env.GROQ_API_KEY;
 
-res.json({
-  status: "ok",
-  platform: "EnFarm Crop Intelligence Server",
-  geminiConfigured: false,
-  groqConfigured,
-  groqVisionConfigured: groqConfigured,
-  timestamp: new Date().toISOString()
-});
-    
-    res.json({
-      status: "ok",
-      platform: "EnFarm Crop Intelligence Server",
-      geminiConfigured,
-      groqConfigured,
-      timestamp: new Date().toISOString()
-    });
+app.get("/api/health", (req, res) => {
+  const groqConfigured = !!process.env.GROQ_API_KEY;
+
+  res.json({
+    status: "ok",
+    platform: "EnFarm Crop Intelligence Server",
+    geminiConfigured: false,
+    groqConfigured,
+    groqVisionConfigured: groqConfigured,
+    timestamp: new Date().toISOString()
   });
+});
+
 
   // API Route: AI Assistant Chat
 
@@ -670,137 +663,7 @@ app.post("/api/analyze-image", aiRateLimit, async (req, res) => {
 });
 
       // Strip potential visual prefixes
-      const rawBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
-      const resolvedMime = mimeType || "image/jpeg";
-
-  
-     
-      let client: GoogleGenAI;
-      try {
-        client = getGeminiClient();
-      } catch (err: any) {
-        if (err.message === "API_KEY_MISSING") {
-          return res.status(503).json({
-            error: "Image analysis is temporarily unavailable. Please try again later.",
-            code: "IMAGE_AI_UNAVAILABLE"
-          });
-        }
-        throw err;
-      }
-
-     
-const prompt = `You are CEN, the EnFarm crop disease specialist for Tanzania.
-
-STEP 1: VALIDATE THE IMAGE BEFORE DIAGNOSIS.
-First determine whether the image clearly contains a real plant or crop.
-Do not assume the image contains a plant just because the user uploaded it
-to a crop-analysis feature.
-
-If the image clearly contains NO plant or crop, do not diagnose anything.
-Return the required JSON schema with:
-- isPlant: false
-- cropName: "Unknown"
-- diagnosis: "Hakuna mmea uliotambuliwa kwenye picha."
-- healthScore: null
-- confidence: 0
-- riskLevel: "Unknown"
-- recommendations: []
-
-If the image is blurry, unclear, or you cannot confidently determine
-whether a plant is present, return isPlant: null and request a clearer
-photo. Do not invent a diagnosis.
-
-STEP 2: ANALYZE ONLY VALID PLANT IMAGES.
-If a plant is clearly visible, identify the crop and assess only symptoms
-that can actually be seen. Distinguish visible symptoms from possible
-causes. Never invent diseases, pests, nutrient deficiencies, or symptoms.
-If the evidence is insufficient, state that the cause cannot be confirmed.
-
-Focus on crops common in Tanzania: maize, cassava, rice, sunflower, beans.
-
-All farmer-facing text must be written in simple Swahili.
-Use scientific names only in the crop field. Everything else must be
-in Swahili.
-
-Return valid JSON matching the existing response schema exactly.
-Do not include Markdown or explanatory text outside the JSON.`;
-  try {
-      const response = await client.models.generateContent({
-        model: "gemini-3.8-flash",
-        contents: [
-          {
-            inlineData: {
-              data: rawBase64,
-              mimeType: resolvedMime
-            }
-          },
-          {
-            text: prompt + (cropTypePrompt ? ` (Note: User thinks this is a ${cropTypePrompt})` : "")
-          }
-        ],
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              crop: {
-                type: Type.STRING,
-                description: "Name of the crop identified, including formal botanical name in parentheses."
-              },
-              healthScore: {
-                type: Type.INTEGER,
-                description: "Estimated health score from 0 (dead/dying) to 100 (flawless health)."
-              },
-              riskLevel: {
-                type: Type.STRING,
-                description: "Disease risk classification: Low, Medium, or High."
-              },
-              diagnosis: {
-                type: Type.STRING,
-                description: "Botanical or pathology diagnosis (e.g., Healthy, Leaf Rust, Nitrogen deficiency, Septoria)."
-              },
-              severity: {
-                type: Type.STRING,
-                description: "Infection severity: None, Mild, Moderate, or Severe."
-              },
-              confidence: {
-                type: Type.NUMBER,
-                description: "Model confidence indicator between 0.0 and 1.0."
-              },
-              recommendations: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.STRING
-                },
-                description: "List of actionable, scientific farming recommendations for resolution or preventive care."
-              },
-              summary: {
-                type: Type.STRING,
-                description: "A professional, concise 1-sentence analytical overview summarizing this diagnosis."
-              }
-            },
-            required: ["crop", "healthScore", "riskLevel", "diagnosis", "severity", "confidence", "recommendations", "summary"]
-          }
-        }
-      });
-
-      const responseText = response.text;
-      if (!responseText) {
-        throw new Error("Empty response received from plant pathologist agent.");
-      }
-
-          const assessment = JSON.parse(responseText.trim());
-      res.json(assessment);
-
-    } catch (error: any) {
-      console.error("Image Analysis API error:", error);
-
-      res.status(500).json({
-        error: error.message || "Image analysis failed."
-      });
-    }
-  }
-);
+   
   // ── WhatsApp Bot ──────────────────────────────────────────────────────────
   app.post(
   "/api/whatsapp",
