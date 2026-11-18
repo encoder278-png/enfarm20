@@ -480,7 +480,7 @@ res.json({
   groqVisionConfigured: groqConfigured,
   timestamp: new Date().toISOString()
 });
-    const groqConfigured = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "YOUR_GROQ_API_KEY";
+    
     res.json({
       status: "ok",
       platform: "EnFarm Crop Intelligence Server",
@@ -792,7 +792,7 @@ Do not include Markdown or explanatory text outside the JSON.`;
       const assessment = JSON.parse(responseText.trim());
       res.json(assessment);
 
-    } catch (error: any) {
+    catch (error: any) {
       console.error("Image Analysis API error:", error);
       res.status(500).json({ error: error.message || "Pathology engine failed." });
     }
