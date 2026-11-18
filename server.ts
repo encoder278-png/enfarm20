@@ -167,7 +167,7 @@ Return ONLY a valid JSON object with these fields:
     response_format: {
       type: "json_object"
     },
-    max_completion_tokens: 1200,
+    max_completion_tokens: 800,
     temperature: 0.2
   });
 
