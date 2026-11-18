@@ -722,28 +722,42 @@ if (!imageResp.headers.get("content-type")?.startsWith("image/")) {
 }
         const imageBuffer = await imageResp.arrayBuffer();
         const base64Image  = Buffer.from(imageBuffer).toString("base64");
-        const mimeType     = imageResp.headers.get("content-type") || "image/jpeg";
+      const mimeType = (
+  imageResp.headers.get("content-type") || "image/jpeg"
+)
+  .split(";")[0]
+  .trim()
+  .toLowerCase();
 
-    
-const imageAssessment = await analyzeCropImage(base64Image, mimeType);
+const imageAssessment = await analyzeCropImage(
+  base64Image,
+  mimeType
+);
 
+// Only save a diagnosis when the image clearly contains a plant.
+const diagnosisRecord =
+  imageAssessment.isPlant === true
+    ? imageAssessment
+    : null;
 
-        let diagnosisRecord: any = null;
-        try {
-          diagnosisRecord = JSON.parse((response.text || "{}").trim());
-        } catch {
-          diagnosisRecord = null;
-        }
+if (imageAssessment.isPlant === true) {
+  const steps = imageAssessment.recommendations
+    .slice(0, 3)
+    .map((r: string, i: number) => `${i + 1}. ${r}`)
+    .join("\n");
 
-        // Build a short farmer-facing Swahili reply from the structured data
-        if (diagnosisRecord) {
-          const steps = (diagnosisRecord.recommendations || []).slice(0, 3)
-            .map((r: string, i: number) => `${i + 1}. ${r}`).join("\n");
-          replyText = `*${diagnosisRecord.diagnosis}*\nZao: ${diagnosisRecord.crop}\nUkali: ${diagnosisRecord.severity}\n\n${steps}`;
-        } else {
-          replyText = "Samahani, sikuweza kuona picha vizuri. Tuma tena.";
-        }
-
+  replyText =
+    `*${imageAssessment.diagnosis}*\n` +
+    `Zao: ${imageAssessment.crop}\n` +
+    `Ukali: ${imageAssessment.severity}\n\n` +
+    `${steps}`;
+} else if (imageAssessment.isPlant === false) {
+  replyText =
+    "Picha hii haionyeshi mmea unaoweza kuchunguzwa. Tafadhali tuma picha ya zao lako.";
+} else {
+  replyText =
+    "Picha haieleweki vizuri. Tafadhali tuma picha iliyo wazi ya jani lililoathirika.";
+}
         // Save structured diagnosis + conversation log
         const updated = {
           ...(farmer || { farmerId, crops: [], diseases: [], conversations: [] }),
@@ -1062,13 +1076,12 @@ try { await saveFarmer(farmerId, updated); } catch (err) { console.error("Save f
 
   // API Route: AI recommendations — switched to Groq
   app.get("/api/recommendations", aiRateLimit, async (req, res) => {
-  const fallback = {
-    pestControl: "Angalia mashamba yako asubuhi kwa dalili za viwavi au wadudu wengine.",
-    irrigation: "Mwagilia mimea yako asubuhi na mapema — lita 2 kwa kila mmea.",
-    fertilization: "Ongeza mbolea ya DAP wakati wa kupanda na urea baada ya wiki 4.",
-    harvesting: "Vuna mahindi yako wakati maganda yanapokauka na kuwa ya kahawia."
-  };
-
+const fallback = {
+  pestControl: "Ushauri haupatikani kwa sasa. Tafadhali jaribu tena baadaye.",
+  irrigation: "Ushauri haupatikani kwa sasa. Tafadhali jaribu tena baadaye.",
+  fertilization: "Ushauri haupatikani kwa sasa. Tafadhali jaribu tena baadaye.",
+  harvesting: "Ushauri haupatikani kwa sasa. Tafadhali jaribu tena baadaye."
+};
   try {
     const client = getGroqClient();
 
