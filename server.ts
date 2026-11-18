@@ -794,7 +794,7 @@ Do not include Markdown or explanatory text outside the JSON.`;
 
     catch (error: any) {
       console.error("Image Analysis API error:", error);
-      res.status(500).json({ error: error.message || "Pathology engine failed." });
+      res.status(500).json({ error: error.message || "Pathology engine failed." 
     }
   });
 
