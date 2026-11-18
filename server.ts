@@ -792,11 +792,15 @@ Do not include Markdown or explanatory text outside the JSON.`;
       const assessment = JSON.parse(responseText.trim());
       res.json(assessment);
 
-    catch (error: any) {
-      console.error("Image Analysis API error:", error);
-      res.status(500).json({ error: error.message || "Pathology engine failed." 
-    }
+    
+catch (error: any) {
+  console.error("Image Analysis API error:", error);
+
+  res.status(500).json({
+    error: error.message || "Image analysis failed."
   });
+}
+});
 
   // ── WhatsApp Bot ──────────────────────────────────────────────────────────
   app.post(
