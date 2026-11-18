@@ -724,7 +724,7 @@ in Swahili.
 
 Return valid JSON matching the existing response schema exactly.
 Do not include Markdown or explanatory text outside the JSON.`;
-
+  try {
       const response = await client.models.generateContent({
         model: "gemini-3.8-flash",
         contents: [
@@ -789,19 +789,18 @@ Do not include Markdown or explanatory text outside the JSON.`;
         throw new Error("Empty response received from plant pathologist agent.");
       }
 
-      const assessment = JSON.parse(responseText.trim());
+          const assessment = JSON.parse(responseText.trim());
       res.json(assessment);
 
-    
-catch (error: any) {
-  console.error("Image Analysis API error:", error);
+    } catch (error: any) {
+      console.error("Image Analysis API error:", error);
 
-  res.status(500).json({
-    error: error.message || "Image analysis failed."
-  });
-}
-});
-
+      res.status(500).json({
+        error: error.message || "Image analysis failed."
+      });
+    }
+  }
+);
   // ── WhatsApp Bot ──────────────────────────────────────────────────────────
   app.post(
   "/api/whatsapp",
