@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
+import OpenAI from "openai";
 import OpenAI from "openai";
 import dotenv from "dotenv";
 import { getFarmer, saveFarmer } from "./src/memoryService";
@@ -19,13 +19,7 @@ const aiRateLimit = rateLimit({
 });
 
 // Lazy initialization of Gemini client (images only)
-function getGeminiClient(): GoogleGenAI {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key || key === "MY_GEMINI_API_KEY" || key === '""' || key === "") {
-    throw new Error("API_KEY_MISSING");
-  }
-  return new GoogleGenAI({ apiKey: key });
-}
+
 
 // Groq client (all text conversations)
 function getGroqClient(): OpenAI {
@@ -40,6 +34,224 @@ function getGroqClient(): OpenAI {
 }
 
 const GROQ_MODEL = "openai/gpt-oss-120b";
+const GROQ_VISION_MODEL = "qwen/qwen3.8-27b";
+
+type CropAssessment = {
+  isPlant: boolean | null;
+  crop: string;
+  healthScore: number | null;
+  riskLevel: string;
+  diagnosis: string;
+  severity: string;
+  confidence: number;
+  recommendations: string[];
+  summary: string;
+};
+
+async function analyzeCropImage(
+  imageBase64: string,
+  mimeType: string,
+  cropTypePrompt?: string
+): Promise<CropAssessment> {
+  const allowedMimeTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp"
+  ];
+
+  const rawBase64 = imageBase64.replace(
+    /^data:image\/[a-zA-Z0-9.+-]+;base64,/,
+    ""
+  );
+
+  if (!allowedMimeTypes.includes(mimeType)) {
+    throw new Error("Unsupported image format.");
+  }
+
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(rawBase64)) {
+    throw new Error("Invalid image encoding.");
+  }
+
+  const imageBuffer = Buffer.from(rawBase64, "base64");
+
+  if (!imageBuffer.length || imageBuffer.length > 10 * 1024 * 1024) {
+    throw new Error("Image must be smaller than 10 MB.");
+  }
+
+  const client = getGroqClient();
+
+  const prompt = `
+You are CEN, the EnFarm agricultural image assessment assistant
+for Tanzanian smallholder farmers.
+
+FIRST: VALIDATE THE IMAGE.
+
+Determine whether the image clearly contains a real plant or crop.
+
+If there is clearly NO plant:
+- isPlant: false
+- crop: "Unknown"
+- healthScore: null
+- riskLevel: "Unknown"
+- diagnosis: "Hakuna mmea uliotambuliwa kwenye picha."
+- severity: "Unknown"
+- confidence: 0
+- recommendations: []
+- summary: "Picha haina mmea unaoweza kuchunguzwa."
+
+If the image is blurry or unclear:
+- isPlant: null
+- crop: "Unknown"
+- healthScore: null
+- riskLevel: "Unknown"
+- diagnosis: "Picha haieleweki vizuri. Tafadhali tuma picha nyingine."
+- severity: "Unknown"
+- confidence: 0
+- recommendations: []
+- summary: "Picha haitoshi kufanya tathmini."
+
+ONLY IF A PLANT IS CLEARLY VISIBLE:
+
+Analyze crops common in Tanzania:
+maize, cassava, rice, sunflower and beans.
+
+Identify visible symptoms only.
+Do not invent diseases, pests, deficiencies or symptoms.
+Distinguish visible symptoms from possible causes.
+Do not claim a disease is confirmed from an image alone.
+
+Use simple Swahili for all farmer-facing text.
+The crop field may use the crop's English name.
+
+Confidence must be between 0 and 1.
+Health score must be an integer from 0 to 100,
+or null if it cannot be reasonably assessed.
+
+If evidence is insufficient, say so clearly.
+
+${cropTypePrompt ? `The farmer thinks this crop is: ${cropTypePrompt}. Treat this as a suggestion, not a confirmed identification.` : ""}
+
+Return ONLY a valid JSON object with these fields:
+
+{
+  "isPlant": true,
+  "crop": "Maize",
+  "healthScore": 80,
+  "riskLevel": "Low",
+  "diagnosis": "Maelezo ya dalili zinazoonekana.",
+  "severity": "Mild",
+  "confidence": 0.75,
+  "recommendations": ["Hatua ya kwanza"],
+  "summary": "Muhtasari mfupi wa tathmini."
+}
+`;
+
+  const completion = await client.chat.completions.create({
+    model: GROQ_VISION_MODEL,
+    messages: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: prompt
+          },
+          {
+            type: "image_url",
+            image_url: {
+              url: `data:${mimeType};base64,${rawBase64}`
+            }
+          }
+        ]
+      }
+    ],
+    response_format: {
+      type: "json_object"
+    },
+    max_completion_tokens: 1200,
+    temperature: 0.2
+  });
+
+  const responseText =
+    completion.choices[0]?.message?.content;
+
+  if (!responseText || typeof responseText !== "string") {
+    throw new Error("Groq Vision returned an empty response.");
+  }
+
+  const parsed = JSON.parse(responseText);
+
+  const isPlant =
+    parsed.isPlant === true
+      ? true
+      : parsed.isPlant === false
+      ? false
+      : null;
+
+  // Never save a diagnosis for a non-plant or unclear image.
+  if (isPlant !== true) {
+    return {
+      isPlant,
+      crop: "Unknown",
+      healthScore: null,
+      riskLevel: "Unknown",
+      diagnosis:
+        isPlant === false
+          ? "Hakuna mmea uliotambuliwa kwenye picha."
+          : "Picha haieleweki vizuri. Tafadhali tuma picha nyingine.",
+      severity: "Unknown",
+      confidence: 0,
+      recommendations: [],
+      summary:
+        isPlant === false
+          ? "Picha haina mmea unaoweza kuchunguzwa."
+          : "Picha haitoshi kufanya tathmini."
+    };
+  }
+
+  const healthScore =
+    typeof parsed.healthScore === "number" &&
+    Number.isInteger(parsed.healthScore) &&
+    parsed.healthScore >= 0 &&
+    parsed.healthScore <= 100
+      ? parsed.healthScore
+      : null;
+
+  const confidence =
+    typeof parsed.confidence === "number"
+      ? Math.max(0, Math.min(1, parsed.confidence))
+      : 0;
+
+  return {
+    isPlant: true,
+    crop: typeof parsed.crop === "string" ? parsed.crop : "Unknown",
+    healthScore,
+    riskLevel:
+      typeof parsed.riskLevel === "string"
+        ? parsed.riskLevel
+        : "Unknown",
+    diagnosis:
+      typeof parsed.diagnosis === "string"
+        ? parsed.diagnosis
+        : "Tathmini haijakamilika.",
+    severity:
+      typeof parsed.severity === "string"
+        ? parsed.severity
+        : "Unknown",
+    confidence,
+    recommendations: Array.isArray(parsed.recommendations)
+      ? parsed.recommendations.filter(
+          (item: unknown): item is string =>
+            typeof item === "string"
+        )
+      : [],
+    summary:
+      typeof parsed.summary === "string"
+        ? parsed.summary
+        : "Tathmini ya picha imekamilika."
+  };
+}
+
 
 // Approximate coordinates for Tanzania regions — add more as real farmers mention them
 const TANZANIA_REGION_COORDS: Record<string, { lat: number; lon: number }> = {
@@ -404,13 +616,49 @@ RULES:
   }
 });
 
-  // API Route: Image Leaf Diagnosis — UNCHANGED, still uses Gemini
-  app.post("/api/analyze-image", aiRateLimit, async (req, res) => {
-    try {
-      const { imageBase64, mimeType, cropTypePrompt } = req.body;
-      if (!imageBase64) {
-        return res.status(400).json({ error: "Image payload is required." });
-      }
+
+  
+// API Route: Image Analysis — Groq Vision
+app.post("/api/analyze-image", aiRateLimit, async (req, res) => {
+  try {
+    const { imageBase64, mimeType, cropTypePrompt } = req.body;
+
+    if (!imageBase64 || typeof imageBase64 !== "string") {
+      return res.status(400).json({
+        error: "Image payload is required."
+      });
+    }
+
+    if (imageBase64.length > 15 * 1024 * 1024) {
+      return res.status(413).json({
+        error: "Image payload is too large."
+      });
+    }
+
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(503).json({
+        error: "Image analysis is temporarily unavailable.",
+        code: "IMAGE_AI_UNAVAILABLE"
+      });
+    }
+
+    const assessment = await analyzeCropImage(
+      imageBase64,
+      mimeType || "image/jpeg",
+      cropTypePrompt
+    );
+
+    return res.json(assessment);
+
+  } catch (error: any) {
+    console.error("Groq Vision image analysis error:", error);
+
+    return res.status(502).json({
+      error: "Image analysis failed. Please try again.",
+      code: "IMAGE_ANALYSIS_FAILED"
+    });
+  }
+});
 
       // Strip potential visual prefixes
       const rawBase64 = imageBase64.replace(/^data:image\/\w+;base64,/, "");
@@ -601,38 +849,35 @@ if (!imageResp.headers.get("content-type")?.startsWith("image/")) {
         const base64Image  = Buffer.from(imageBuffer).toString("base64");
         const mimeType     = imageResp.headers.get("content-type") || "image/jpeg";
 
-        const client = getGeminiClient();
-        const response = await client.models.generateContent({
-          model: "gemini-3.8-flash",
-          contents: [
-            { inlineData: { data: base64Image, mimeType } },
-            {
-              text: `You are CEN, the EnFarm crop disease specialist for Tanzania. Analyze this crop image.
-Focus on crops common in Tanzania: maize, cassava, rice, sunflower, beans.
-Identify the crop, diagnose any disease, pest damage, or nutrient deficiency.
-All text fields in your response must be written in simple Swahili that an uneducated farmer can understand.
-Use scientific names only in the crop field. Everything else must be in Swahili.
-Provide your response exactly matching the JSON schema structure.`,
-            },
-          ],
-          config: {
-            responseMimeType: "application/json",
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                crop: { type: Type.STRING },
-                healthScore: { type: Type.INTEGER },
-                riskLevel: { type: Type.STRING },
-                diagnosis: { type: Type.STRING },
-                severity: { type: Type.STRING },
-                confidence: { type: Type.NUMBER },
-                recommendations: { type: Type.ARRAY, items: { type: Type.STRING } },
-                summary: { type: Type.STRING }
-              },
-              required: ["crop", "healthScore", "riskLevel", "diagnosis", "severity", "confidence", "recommendations", "summary"]
-            }
-          }
-        });
+    
+const imageAssessment = await analyzeCropImage(base64Image, mimeType);
+
+let diagnosisRecord = null;
+
+if (imageAssessment.isPlant === true) {
+  diagnosisRecord = imageAssessment;
+
+  const recommendations = imageAssessment.recommendations
+    .map((item: string) => `• ${item}`)
+    .join("\n");
+
+  replyText =
+    `🌱 *Tathmini ya EnFarm*\n\n` +
+    `Zao: ${imageAssessment.crop}\n` +
+    `Afya ya zao: ${imageAssessment.healthScore ?? "Haijabainika"}/100\n` +
+    `Hatari: ${imageAssessment.riskLevel}\n` +
+    `Tatizo: ${imageAssessment.diagnosis}\n` +
+    `Ukali: ${imageAssessment.severity}\n` +
+    `Uhakika wa tathmini: ${Math.round(imageAssessment.confidence * 100)}%\n\n` +
+    `*Ushauri:*\n${recommendations}\n\n` +
+    `${imageAssessment.summary}`;
+} else if (imageAssessment.isPlant === false) {
+  replyText =
+    "Samahani, picha hii haionekani kuwa ya mmea. Tafadhali tuma picha iliyo wazi ya zao lako.";
+} else {
+  replyText =
+    "Sijaweza kutambua vizuri zao au tatizo kwenye picha hii. Tafadhali piga picha nyingine iliyo wazi yenye mwanga wa kutosha.";
+}
 
         let diagnosisRecord: any = null;
         try {
