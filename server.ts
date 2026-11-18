@@ -470,7 +470,16 @@ async function startServer() {
 
   // API Route: Health Check
   app.get("/api/health", (req, res) => {
-    const geminiConfigured = !!process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== "MY_GEMINI_API_KEY";
+   const groqConfigured = !!process.env.GROQ_API_KEY;
+
+res.json({
+  status: "ok",
+  platform: "EnFarm Crop Intelligence Server",
+  geminiConfigured: false,
+  groqConfigured,
+  groqVisionConfigured: groqConfigured,
+  timestamp: new Date().toISOString()
+});
     const groqConfigured = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "YOUR_GROQ_API_KEY";
     res.json({
       status: "ok",
