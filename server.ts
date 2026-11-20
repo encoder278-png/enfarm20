@@ -1058,9 +1058,24 @@ console.log("CEN WHATSAPP DELIVERY:", {
         replyText = "Samahani, sijapata ujumbe wako. Tafadhali jaribu tena.";
       }
 
+      
       twiml.message(replyText);
 
+    } catch (error) {
+      console.error("WhatsApp webhook error:", error);
 
+      // Only send an error response if Twilio has not received one yet.
+      if (!res.headersSent) {
+        twiml.message(
+          "Samahani, kuna tatizo. Jaribu tena baadaye."
+        );
+        res.writeHead(200, { "Content-Type": "text/xml" });
+        res.end(twiml.toString());
+      }
+    }
+
+  }
+);
   // Manual reply from admin to farmer via WhatsApp — UNCHANGED
   app.post("/api/whatsapp-send", aiRateLimit, async (req, res) => {
     try {
