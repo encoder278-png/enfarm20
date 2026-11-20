@@ -1013,38 +1013,42 @@ diseases: [
 };
 try { await saveFarmer(farmerId, updated); } catch (err) { console.error("Save failed for", farmerId, err); }
 
-            // Send the real answer as a follow-up WhatsApp message
-            const accountSid = process.env.TWILIO_ACCOUNT_SID;
-            const authToken  = process.env.TWILIO_AUTH_TOKEN;
-            const from       = process.env.TWILIO_WHATSAPP_NUMBER;
-            if (accountSid && authToken && from) {
-              const followUpClient = twilio(accountSid, authToken);
-              await followUpClient.messages.create({
-                from,
-                to: farmerPhone,
-                body: replyText,
-              });
-            }
-          } catch (err) {
-            console.error("Async WhatsApp text handling error:", err);
-          }
-        })();
-        return; // already responded to Twilio above, stop here
+            
+// Send CEN's actual answer to the farmer through WhatsApp
+const accountSid = process.env.TWILIO_ACCOUNT_SID?.trim();
+const authToken = process.env.TWILIO_AUTH_TOKEN?.trim();
+const configuredFrom = process.env.TWILIO_WHATSAPP_NUMBER?.trim();
 
-      } else {
-        replyText = "Habari! Mimi ni CEN wa EnFarm. Niambie tatizo lako la shamba au tuma picha ya zao lako.";
-      }
+if (!accountSid || !authToken || !configuredFrom) {
+  throw new Error(
+    "WhatsApp delivery failed: Twilio environment variables are missing."
+  );
+}
 
-      twiml.message(replyText);
+if (!farmerPhone.startsWith("whatsapp:+")) {
+  throw new Error(
+    `Invalid WhatsApp destination: ${farmerPhone}`
+  );
+}
 
-    } catch (error) {
-      console.error("WhatsApp error:", error);
-      twiml.message("Samahani, kuna tatizo. Jaribu tena baadaye.");
-    }
+const whatsappFrom = configuredFrom.startsWith("whatsapp:")
+  ? configuredFrom
+  : `whatsapp:${configuredFrom.startsWith("+") ? configuredFrom : "+" + configuredFrom}`;
 
-    res.writeHead(200, { "Content-Type": "text/xml" });
-    res.end(twiml.toString());
-  });
+const whatsappClient = twilio(accountSid, authToken);
+
+const sentMessage = await whatsappClient.messages.create({
+  from: whatsappFrom,
+  to: farmerPhone,
+  body: replyText,
+});
+
+console.log("CEN WHATSAPP DELIVERY:", {
+  farmer: farmerPhone,
+  messageSid: sentMessage.sid,
+  status: sentMessage.status,
+});
+
 
   // Manual reply from admin to farmer via WhatsApp — UNCHANGED
   app.post("/api/whatsapp-send", aiRateLimit, async (req, res) => {
