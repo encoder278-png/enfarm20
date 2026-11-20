@@ -1048,6 +1048,17 @@ console.log("CEN WHATSAPP DELIVERY:", {
   messageSid: sentMessage.sid,
   status: sentMessage.status,
 });
+                      } catch (err) {
+            console.error("Async WhatsApp text handling error:", err);
+          }
+        })();
+
+        return;
+      } else {
+        replyText = "Samahani, sijapata ujumbe wako. Tafadhali jaribu tena.";
+      }
+
+      twiml.message(replyText);
 
 
   // Manual reply from admin to farmer via WhatsApp — UNCHANGED
